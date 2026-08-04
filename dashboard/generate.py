@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
@@ -423,13 +424,16 @@ footer { margin-top: 2.5rem; font-size: 0.8rem; color: var(--text-muted); }
 .actions-link { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--accent);
   text-decoration: none; border: 1px solid var(--border); border-radius: 8px; padding: 0.45rem 0.8rem; }
 .actions-link:hover { border-color: var(--accent); }
+.regtable-scroll { overflow-x: auto; }
 table.regtable { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
 table.regtable th { text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;
-  color: var(--text-muted); border-bottom: 1px solid var(--border); padding: 0.5rem 0.6rem; }
+  color: var(--text-muted); border-bottom: 1px solid var(--border); padding: 0.5rem 0.6rem; white-space: nowrap; }
 table.regtable td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
 table.regtable a { color: var(--accent); text-decoration: none; font-weight: 500; }
 table.regtable a:hover { text-decoration: underline; }
 table.regtable .classname { color: var(--text-muted); font-size: 0.8rem; }
+table.regtable td:last-child { max-width: 420px; }
+table.regtable td:last-child code { display: block; overflow-x: auto; white-space: pre; }
 """
 
 
@@ -446,6 +450,17 @@ def _page_shell(title: str, heading: str, subtitle: str, body: str) -> str:
 </div></body></html>"""
 
 
+_JUNIT_MESSAGE_RE = re.compile(r"^.*? failed:\s*(.*?)\s*\(see .*\)$")
+
+
+def _clean_error(message: str) -> str:
+    """JUnit failure messages are `<test> failed: <error> (see <path>)` —
+    strips the redundant test-name prefix and log-path suffix, keeping just
+    the error signature itself."""
+    m = _JUNIT_MESSAGE_RE.match(message)
+    return m.group(1) if m else message
+
+
 def _regression_table(entries: list[RegressionEntry], best_by_test: dict[str, RunView]) -> str:
     if not entries:
         return '<p class="muted">No regression.xml provided — pass --regression-xml to show the full test list.</p>'
@@ -456,19 +471,23 @@ def _regression_table(entries: list[RegressionEntry], best_by_test: dict[str, Ru
         if not e.failed:
             status = '<span class="badge badge-good">PASS</span>'
             name_cell = html.escape(e.name)
+            error_cell = '<span class="muted">&mdash;</span>'
         elif run is not None:
             status = _badge(run.phase, _STATUS)
             name_cell = f'<a href="reports/{_slug(e.name)}.html">{html.escape(e.name)}</a>'
+            error_cell = f'<code>{html.escape(_clean_error(e.message))}</code>' if e.message else '<span class="muted">&mdash;</span>'
         else:
             status = '<span class="badge badge-critical">FAIL — not yet debugged</span>'
             name_cell = html.escape(e.name)
+            error_cell = f'<code>{html.escape(_clean_error(e.message))}</code>' if e.message else '<span class="muted">&mdash;</span>'
         rows.append(
-            f'<tr><td>{name_cell}<div class="classname">{html.escape(e.classname)}</div></td><td>{status}</td></tr>'
+            f'<tr><td>{name_cell}<div class="classname">{html.escape(e.classname)}</div></td>'
+            f'<td>{status}</td><td>{error_cell}</td></tr>'
         )
-    return f"""<table class="regtable">
-<tr><th>Test</th><th>Status</th></tr>
+    return f"""<div class="regtable-scroll"><table class="regtable">
+<tr><th>Test</th><th>Status</th><th>Error</th></tr>
 {''.join(rows)}
-</table>"""
+</table></div>"""
 
 
 def render_index(

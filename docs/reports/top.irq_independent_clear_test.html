@@ -87,13 +87,16 @@ footer { margin-top: 2.5rem; font-size: 0.8rem; color: var(--text-muted); }
 .actions-link { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--accent);
   text-decoration: none; border: 1px solid var(--border); border-radius: 8px; padding: 0.45rem 0.8rem; }
 .actions-link:hover { border-color: var(--accent); }
+.regtable-scroll { overflow-x: auto; }
 table.regtable { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
 table.regtable th { text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;
-  color: var(--text-muted); border-bottom: 1px solid var(--border); padding: 0.5rem 0.6rem; }
+  color: var(--text-muted); border-bottom: 1px solid var(--border); padding: 0.5rem 0.6rem; white-space: nowrap; }
 table.regtable td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
 table.regtable a { color: var(--accent); text-decoration: none; font-weight: 500; }
 table.regtable a:hover { text-decoration: underline; }
 table.regtable .classname { color: var(--text-muted); font-size: 0.8rem; }
+table.regtable td:last-child { max-width: 420px; }
+table.regtable td:last-child code { display: block; overflow-x: auto; white-space: pre; }
 </style>
 </head><body><div class="wrap">
 <h1>🔍 top.irq_independent_clear_test</h1>
