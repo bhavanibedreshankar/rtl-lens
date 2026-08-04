@@ -31,7 +31,7 @@ def build_apply_and_verify_node(config: ProjectConfig, run_dir: Path):
             )
             log_event(logger, "fix_committed", branch=branch_name, sha=sha)
 
-            result = sim_tools.run_test(config.sim, repo_path, failure.test)
+            result = sim_tools.run_test(config.sim, repo_path, failure.test, seed=failure.seed)
             phase = "verified" if result.passed else "failed"
             log_event(logger, "rerun_result", passed=result.passed, phase=phase)
             return {

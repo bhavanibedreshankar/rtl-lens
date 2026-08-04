@@ -1,0 +1,5 @@
+{
+  "run_id": "68e2f7e2a943",
+  "config_path": "config/tpe.yaml",
+  "failure_dir": "/Users/bhavanibs/Documents/Claude/SIM_LOGS/WORK/smoke/matrix_engine.matmul_overflow_test/rtl_sim"
+}

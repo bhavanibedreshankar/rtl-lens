@@ -15,7 +15,6 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from langchain_anthropic import ChatAnthropic
-from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, START, StateGraph
 
@@ -79,7 +78,7 @@ def build_state_graph(
     sg.add_node("investigate", build_investigate_node(planning_model, tools, config.limits))
     sg.add_node("tools", build_tools_node(tools))
     sg.add_node("compress_evidence", build_summarization_node(planning_model))
-    sg.add_node("synthesize", build_synthesize_node(synthesis_model))
+    sg.add_node("synthesize", build_synthesize_node(synthesis_model, config.rtl_repo))
     sg.add_node("score_confidence", score_confidence)
     sg.add_node("need_more_evidence", request_more_evidence)
     sg.add_node("checkpoint", build_checkpoint_node(run_dir))
@@ -111,25 +110,21 @@ def build_state_graph(
     return sg
 
 
-_ALLOWED_STATE_MODELS = [
-    ("agent.state", "Failure"),
-    ("agent.state", "EvidenceItem"),
-    ("agent.state", "Hypothesis"),
-    ("agent.state", "ConfidenceResult"),
-    ("langmem.short_term.summarization", "RunningSummary"),
-]
-
-
 @contextmanager
 def open_checkpointer(run_dir: Path) -> Iterator[SqliteSaver]:
-    """A checkpoint holds our pydantic state models (Failure, Hypothesis, ...)
-    directly, so the serializer needs those explicitly allow-listed — otherwise
-    it falls back to a deprecated pickle path with a runtime warning on every
-    resume."""
+    """Deliberately uses JsonPlusSerializer's default (permissive) allowlist.
+
+    An earlier version passed an explicit `allowed_msgpack_modules` list here
+    to silence a deprecation warning about our pydantic state models — but
+    passing *any* explicit list switches the serializer from "allow
+    everything" to "allow only what's listed," which silently dropped
+    langchain_core's own message classes (AIMessage, HumanMessage, ...) on
+    resume and broke `more-evidence`/`approve` with a cryptic "at least one
+    message is required" error. The warning is cosmetic; a broken resume
+    is not — leaving the default alone is the correct tradeoff."""
     run_dir.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(run_dir / "checkpoint.sqlite"), check_same_thread=False)
     try:
-        serde = JsonPlusSerializer(allowed_msgpack_modules=_ALLOWED_STATE_MODELS)
-        yield SqliteSaver(conn, serde=serde)
+        yield SqliteSaver(conn)
     finally:
         conn.close()

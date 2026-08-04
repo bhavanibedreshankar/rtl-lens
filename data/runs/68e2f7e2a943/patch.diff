@@ -1,0 +1,11 @@
+--- a/rtl/matrix_engine/pe.sv
++++ b/rtl/matrix_engine/pe.sv
+@@ -47,7 +47,7 @@
+                                (sum[ACCUM_WIDTH-1] != acc_in[ACCUM_WIDTH-1]);
+   // On overflow, clamp rather than silently wrap: the shared operand sign
+   // tells us which rail to saturate to.
+-  assign sum_saturated = !this_add_overflows ? sum : (acc_in[ACCUM_WIDTH-1] ? sum : AccumMax);
++  assign sum_saturated = !this_add_overflows ? sum : (acc_in[ACCUM_WIDTH-1] ? AccumMin : AccumMax);
+ 
+   always_ff @(posedge clk or negedge rst_n) begin
+     if (!rst_n) begin

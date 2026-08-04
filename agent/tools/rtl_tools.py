@@ -81,6 +81,63 @@ def build_rtl_tools(cfg: RtlRepoConfig) -> list[StructuredTool]:
     return [StructuredTool.from_function(read_rtl_file, name="rtl_read_file", args_schema=ReadFileArgs)]
 
 
+class DiffMismatchError(RuntimeError):
+    """Raised when the model's claimed old_lines don't match the real source —
+    i.e. it proposed a patch against text it didn't actually read, rather than
+    a `git apply` formatting slip."""
+
+
+def build_unified_diff(
+    cfg: RtlRepoConfig,
+    file: str,
+    start_line: int,
+    old_lines: list[str],
+    new_lines: list[str],
+    context: int = 3,
+) -> str:
+    """Constructs a correctly-headered unified diff mechanically from the real
+    file, rather than trusting a model-authored diff's hand-computed hunk
+    line counts — which are a recurring source of `git apply`-rejected
+    "corrupt patch" failures even when the actual edit is sound. The only
+    thing the model can get wrong here is `old_lines` itself not matching the
+    source, which is exactly the ungrounded-hypothesis case this should catch.
+    """
+    full_path = _resolve_in_scope(cfg, file)
+    lines = full_path.read_text().splitlines()
+    n = len(lines)
+    end_line = start_line + len(old_lines) - 1
+
+    actual = lines[start_line - 1 : end_line]
+    if actual != old_lines:
+        raise DiffMismatchError(
+            f"old_lines don't match the actual source at {file}:{start_line}-{end_line}.\n"
+            f"Expected (claimed): {old_lines}\nActual (real file):  {actual}"
+        )
+
+    ctx_lo = max(1, start_line - context)
+    ctx_hi = min(n, end_line + context)
+    pre_context = lines[ctx_lo - 1 : start_line - 1]
+    post_context = lines[end_line:ctx_hi]
+
+    old_count = len(pre_context) + len(old_lines) + len(post_context)
+    new_count = len(pre_context) + len(new_lines) + len(post_context)
+
+    hunk_body = (
+        [f" {l}" for l in pre_context]
+        + [f"-{l}" for l in old_lines]
+        + [f"+{l}" for l in new_lines]
+        + [f" {l}" for l in post_context]
+    )
+
+    return (
+        f"--- a/{file}\n"
+        f"+++ b/{file}\n"
+        f"@@ -{ctx_lo},{old_count} +{ctx_lo},{new_count} @@\n"
+        + "\n".join(hunk_body)
+        + "\n"
+    )
+
+
 def stage_patch(run_dir: Path, patch_diff: str) -> Path:
     """Write a proposed patch into the run's own directory only — never the RTL repo.
 

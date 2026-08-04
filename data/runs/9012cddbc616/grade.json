@@ -1,0 +1,12 @@
+{
+  "run_id": "9012cddbc616",
+  "test": "pmu.latency_test",
+  "agent_file": "rtl/pmu/tpe_pmu.sv",
+  "agent_line": 107,
+  "expected_bug_number": 7,
+  "expected_file": "rtl/pmu/tpe_pmu.sv",
+  "expected_lines": [],
+  "file_match": true,
+  "line_match": true,
+  "verdict": "correct"
+}

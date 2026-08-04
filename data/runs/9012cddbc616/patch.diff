@@ -1,0 +1,23 @@
+--- a/rtl/pmu/tpe_pmu.sv
++++ b/rtl/pmu/tpe_pmu.sv
+@@ -104,16 +104,10 @@
+         latency_ctr_q <= latency_ctr_q + 32'd1;
+       end
+ 
+-      if (cmd_done_valid) begin
+-        // BUG (#7, see docs/verification/bug_list.md): this cycle's
+-        // increment above (dispatch_active_q branch) hasn't landed in
+-        // latency_ctr_q yet -- nonblocking assignments both read the *old*
+-        // value, so capturing latency_ctr_q here misses the completion
+-        // cycle itself and undercounts by exactly 1. Should be
+-        // `latency_ctr_q + 32'd1`.
+-        cmd_latency_last_q <= latency_ctr_q;
+-        dispatch_active_q  <= 1'b0;
+-      end
++      if (cmd_done_valid) begin
++        cmd_latency_last_q <= latency_ctr_q + 32'd1;
++        dispatch_active_q  <= 1'b0;
++      end
+     end
+   end
+ 

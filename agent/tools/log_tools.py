@@ -26,14 +26,24 @@ _IDENT_RE = re.compile(r"\b[A-Za-z][A-Za-z0-9_]{2,}\b")
 _PATH_LIKE_RE = re.compile(r"[./\\]")
 
 
-def _guess_block_test(failure_dir: Path) -> tuple[str, str]:
+_SEED_SUFFIX_RE = re.compile(r"\.seed(\d+)$")
+
+
+def _guess_block_test(failure_dir: Path) -> tuple[str, str, int | None]:
     tag_dir = failure_dir if not failure_dir.name == "rtl_sim" else failure_dir.parent
-    tag = tag_dir.name  # "<block>.<test>"
+    tag = tag_dir.name  # "<block>.<test>" or "<block>.<test>.seed<N>" for a seeded random run
+
+    seed: int | None = None
+    seed_match = _SEED_SUFFIX_RE.search(tag)
+    if seed_match:
+        seed = int(seed_match.group(1))
+        tag = tag[: seed_match.start()]
+
     if "." in tag:
         block, test = tag.split(".", 1)
     else:
         block, test = "unknown", tag
-    return block, test
+    return block, test, seed
 
 
 def _extract_signals(text: str) -> list[str]:
@@ -60,7 +70,7 @@ def parse_failure(failure_dir: Path, sim_cfg: SimConfig | None = None) -> Failur
     if not rtl_sim_dir.is_dir():
         rtl_sim_dir = failure_dir  # caller pointed straight at the log dir
 
-    block, test = _guess_block_test(failure_dir)
+    block, test, seed = _guess_block_test(failure_dir)
 
     status = _read_json(rtl_sim_dir / "status.json")
     run_log = _read_text(rtl_sim_dir / "run.log")
@@ -89,8 +99,9 @@ def parse_failure(failure_dir: Path, sim_cfg: SimConfig | None = None) -> Failur
         message=message,
         signals=_extract_signals(message),
         raw_excerpt=raw_excerpt,
+        seed=seed,
     )
-    log_event(logger, "failure_parsed", test=failure.test, error_class=error_class, signals=failure.signals)
+    log_event(logger, "failure_parsed", test=failure.test, error_class=error_class, signals=failure.signals, seed=seed)
     return failure
 
 

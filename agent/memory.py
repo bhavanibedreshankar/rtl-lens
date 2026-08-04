@@ -44,14 +44,32 @@ def open_memory_store(path: Path) -> Iterator[BaseStore]:
 
 def build_summarization_node(model: BaseChatModel, max_tokens: int = 6000, max_summary_tokens: int = 256):
     """Compresses `messages` -> `summarized_messages` once the running token
-    count exceeds `max_tokens`. Cheap no-op below that threshold."""
-    return SummarizationNode(
+    count exceeds `max_tokens`. Cheap no-op below that threshold.
+
+    Wrapped in a try/except: LangMem's running-summary bookkeeping (tracked in
+    `state["context"]`) has edge cases across an interrupt/resume boundary —
+    specifically, resuming after the checkpoint (as `more-evidence` does) has
+    been observed to produce an empty message list on a later summarization
+    pass, which the underlying Anthropic call then rejects outright. That
+    failure must never take down the whole investigation: falling back to
+    passing `messages` through unsummarized costs some tokens, not correctness.
+    """
+    node = SummarizationNode(
         model=model,
         max_tokens=max_tokens,
         max_summary_tokens=max_summary_tokens,
         input_messages_key="messages",
         output_messages_key="summarized_messages",
     )
+
+    def safe_compress(state: DebugState) -> dict:
+        try:
+            return node.invoke(state)
+        except Exception as exc:  # noqa: BLE001
+            log_event(logger, "summarization_failed_falling_back", error=str(exc), level=30)
+            return {"summarized_messages": state["messages"]}
+
+    return safe_compress
 
 
 class ProceduralMemory:

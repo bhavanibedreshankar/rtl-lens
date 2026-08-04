@@ -1,0 +1,329 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dma.dma_multiburst_write_test — RTL-Lens</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #fcfcfb; --surface-1: #ffffff; --border: #e5e4e0;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #83817a;
+  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+  --accent: #2a78d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface-0: #121211; --surface-1: #1a1a19; --border: #2e2e2b;
+    --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #8f8d84;
+    --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #e66767;
+    --accent: #3987e5;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #121211; --surface-1: #1a1a19; --border: #2e2e2b;
+  --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #8f8d84;
+  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #e66767;
+  --accent: #3987e5;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface-0); color: var(--text-primary);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+h1 { font-size: 1.7rem; margin: 0 0 0.25rem; }
+h2 { font-size: 1.1rem; margin: 0 0 1rem; }
+.subtitle { color: var(--text-secondary); margin: 0 0 2rem; max-width: 60ch; }
+.stat-row { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.stat { min-width: 110px; }
+.stat-num { font-size: 1.8rem; font-weight: 700; }
+.stat-label { font-size: 0.8rem; color: var(--text-secondary); }
+.panel { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px;
+  padding: 1.25rem 1.5rem; margin-bottom: 2rem; }
+.grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+.card-head h3 { margin: 0; font-size: 1.05rem; }
+.badge { font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.55rem; border-radius: 999px;
+  border: 1px solid transparent; white-space: nowrap; }
+.badge-good { color: var(--good); border-color: var(--good); }
+.badge-warning { color: #8a5a00; border-color: var(--warning); background: color-mix(in srgb, var(--warning) 15%, transparent); }
+:root[data-theme="dark"] .badge-warning, @media (prefers-color-scheme: dark) { .badge-warning { color: var(--warning); } }
+.badge-critical { color: var(--critical); border-color: var(--critical); }
+.badge-serious { color: var(--serious); border-color: var(--serious); }
+.kv { display: flex; gap: 0.5rem; padding: 0.2rem 0; font-size: 0.9rem; align-items: center; flex-wrap: wrap; }
+.kv .k { color: var(--text-secondary); min-width: 130px; }
+.kv .v { color: var(--text-primary); }
+code { background: var(--surface-0); border: 1px solid var(--border); border-radius: 4px;
+  padding: 0.1rem 0.35rem; font-size: 0.85rem; }
+.muted { color: var(--text-muted); font-size: 0.85rem; }
+.explanation { font-size: 0.9rem; color: var(--text-secondary); margin: 0.5rem 0; }
+.conf-wrap { display: flex; align-items: center; gap: 0.5rem; width: 160px; }
+.conf-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.conf-fill { height: 100%; border-radius: 3px; }
+.conf-good { background: var(--good); }
+.conf-warning { background: var(--warning); }
+.conf-critical { background: var(--critical); }
+.conf-label { font-size: 0.78rem; color: var(--text-secondary); }
+details.patch, details.evidence { margin-top: 0.75rem; }
+details.patch summary, details.evidence summary { cursor: pointer; font-size: 0.85rem; color: var(--accent); }
+pre.diff { background: var(--surface-0); border: 1px solid var(--border); border-radius: 8px;
+  padding: 0.75rem 1rem; overflow-x: auto; font-size: 0.8rem; margin-top: 0.5rem; }
+.breadcrumb { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.kv-block { margin: 0.6rem 0; }
+.kv-block .k { color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.3rem; }
+pre.fail-sig { background: var(--surface-0); border: 1px solid var(--border); border-left: 3px solid var(--serious);
+  border-radius: 6px; padding: 0.6rem 0.85rem; font-size: 0.82rem; overflow-x: auto; white-space: pre-wrap; margin: 0; }
+ol.plan { margin: 0; padding-left: 1.25rem; font-size: 0.88rem; color: var(--text-secondary); }
+ol.plan li { margin-bottom: 0.15rem; }
+ol.plan code { font-size: 0.82rem; }
+ol.evidence-list { list-style: none; margin: 0.5rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+ol.evidence-list li { border-left: 2px solid var(--border); padding-left: 0.75rem; }
+.step-head { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.2rem; }
+pre.step-result { background: var(--surface-0); border: 1px solid var(--border); border-radius: 6px;
+  padding: 0.5rem 0.7rem; font-size: 0.78rem; overflow-x: auto; white-space: pre-wrap; margin: 0; max-height: 220px; overflow-y: auto; }
+footer { margin-top: 2.5rem; font-size: 0.8rem; color: var(--text-muted); }
+.back-link { display: inline-block; margin-bottom: 1.25rem; font-size: 0.85rem; color: var(--accent); text-decoration: none; }
+.back-link:hover { text-decoration: underline; }
+.actions-link { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--accent);
+  text-decoration: none; border: 1px solid var(--border); border-radius: 8px; padding: 0.45rem 0.8rem; }
+.actions-link:hover { border-color: var(--accent); }
+table.regtable { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+table.regtable th { text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--text-muted); border-bottom: 1px solid var(--border); padding: 0.5rem 0.6rem; }
+table.regtable td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+table.regtable a { color: var(--accent); text-decoration: none; font-weight: 500; }
+table.regtable a:hover { text-decoration: underline; }
+table.regtable .classname { color: var(--text-muted); font-size: 0.8rem; }
+</style>
+</head><body><div class="wrap">
+<h1>🔍 dma.dma_multiburst_write_test</h1>
+<p class="subtitle">Individual debug report — smoke regression.</p>
+
+<a class="back-link" href="../index.html">&larr; Back to regression report</a>
+<div class="grid">
+
+    <article class="card">
+      <header class="card-head">
+        <div>
+          <div class="breadcrumb">smoke regression</div>
+          <h3>dma.dma_multiburst_write_test</h3>
+        </div>
+        <span class="badge badge-warning">Rejected</span>
+      </header>
+      
+        <div class="kv-block">
+          <span class="k">Fail signature (MismatchError)</span>
+          <pre class="fail-sig">MismatchError: 1 row mismatches</pre>
+        </div>
+      
+    <div class="kv-block">
+      <span class="k">Investigation plan</span>
+      <ol class="plan"><li>Searched the design graph (<code>dma</code>)</li><li>Searched the design spec for expected behavior (<code>dma multiburst write</code>)</li><li>Inspected the module instance hierarchy (<code>tpe_dma</code>)</li><li>Searched the design spec for expected behavior (<code>DMA state machine ST_WR_DATA ST_WR_SRAM_RD</code>)</li><li>Read the RTL source (<code>rtl</code>)</li><li>Searched the design graph (<code>ST_WR_DATA</code>)</li><li>Searched the design graph (<code>state</code>)</li><li>Traced the signal's driver (<code>state_d</code>)</li><li>Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</li><li>Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</li><li>Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</li><li>Searched the design graph (<code>sram_rdata</code>)</li><li>Traced the signal's driver (<code>sram_rdata</code>)</li><li>Read the RTL source (<code>rtl/top/tpe_top.sv</code>)</li><li>Read the RTL source (<code>rtl/top/tpe_top.sv</code>)</li><li>Searched the design graph (<code>dp_ram</code>)</li><li>Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</li><li>Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</li><li>Read the RTL source (<code>rtl/top/tpe_top.sv</code>)</li><li>Searched the design graph (<code>sram_rdata</code>)</li></ol>
+    </div>
+      <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/dma/tpe_dma.sv:239</code></span></div>
+      <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="61% (medium)">
+  <div class="conf-track"><div class="conf-fill conf-warning" style="width:61%"></div></div>
+  <span class="conf-label">61%</span>
+</div></span></div>
+      <p class="explanation">In the ST_WR_DATA state, m_wdata is driven directly from the combinational sram_rdata port (line 231: assign m_wdata = sram_rdata;), relying on dp_ram&#x27;s registered read port to hold the beat fetched during the single-cycle ST_WR_SRAM_RD state stable until the write happens. However the SRAM read enable (sram_en) is only asserted while state_q==ST_WR_SRAM_RD, a single cycle, and is de-asserted once the FSM moves to ST_WR_DATA. If the write side (m_wready) stalls (not immediately ready), the FSM remains in ST_WR_DATA for more than one cycle while sram_en is low, and depending on the dp_ram model&#x27;s port behavero when not enabled, sram_rdata will not continue to hold correctly (e.g. may go to 0 due to enable-gated output register), producing an eventual all-zero payload as seen in mismatch row 16 (rtl=0x0...0, expected pattern). The minimal fix is to keep sram_en held (re-issuing the same-address read, harmless since sram_we stays 0) throughout ST_WR_DATA whenever the write beat hasn&#x27;t completed yet, ensuring the registered sram_rdata continues to reflect the same row&#x27;s data until the AXI write actually completes.</p>
+      
+    <details class="evidence">
+      <summary>Retrieved evidence (20 steps)</summary>
+      <ol class="evidence-list"><li>
+          <div class="step-head">Step 1: Searched the design graph (<code>dma</code>)</div>
+          <pre class="step-result">- Instance:u_dma (id=instance:tpe_top.u_dma, module=None)
+- Module:tpe_dma (id=module:tpe_dma, module=None)
+- Signal:dma_busy (id=signal:tpe_top.dma_busy, module=tpe_top)
+- Signal:dma_done (id=signal:tpe_top.dma_done, module=tpe_top)
+- Port:dma_wait (id=port:tpe_pmu.dma_wait, module=tpe_pmu)
+- Port:dma_busy (id=port:tpe_scheduler__R10_C10.dma_busy, module=tpe_scheduler__R10_C10)
+- Port:dma_done (id=port:tpe_scheduler__R10_C10.dma_done, module=tpe_scheduler__R10_C10)
+- Signal:dma_start (id=signal</pre>
+        </li><li>
+          <div class="step-head">Step 2: Searched the design spec for expected behavior (<code>dma multiburst write</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;dma multiburst write&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 3: Inspected the module instance hierarchy (<code>tpe_dma</code>)</div>
+          <pre class="step-result">{&quot;module&quot;: {&quot;name&quot;: &quot;tpe_dma&quot;, &quot;orig_name&quot;: &quot;tpe_dma&quot;, &quot;level&quot;: 2, &quot;is_top&quot;: false, &quot;node_type&quot;: &quot;Module&quot;, &quot;id&quot;: &quot;module:tpe_dma&quot;}, &quot;instances&quot;: []}</pre>
+        </li><li>
+          <div class="step-head">Step 4: Searched the design spec for expected behavior (<code>DMA state machine ST_WR_DATA ST_WR_SRAM_RD</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;DMA state machine ST_WR_DATA ST_WR_SRAM_RD&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 5: Read the RTL source (<code>rtl</code>)</div>
+          <pre class="step-result">(denied) &#x27;rtl&#x27; is outside rtl/ — only RTL source is readable</pre>
+        </li><li>
+          <div class="step-head">Step 6: Searched the design graph (<code>ST_WR_DATA</code>)</div>
+          <pre class="step-result">(no matches)</pre>
+        </li><li>
+          <div class="step-head">Step 7: Searched the design graph (<code>state</code>)</div>
+          <pre class="step-result">- Signal:state_d (id=signal:tpe_dma.state_d, module=tpe_dma)
+- Register:state_q (id=register:tpe_dma.state_q, module=tpe_dma)
+- Signal:state_d (id=signal:tpe_scheduler__R10_C10.state_d, module=tpe_scheduler__R10_C10)
+- Register:state_q (id=register:tpe_scheduler__R10_C10.state_q, module=tpe_scheduler__R10_C10)
+- Signal:state_d (id=signal:matrix_engine_ctrl__pi1.state_d, module=matrix_engine_ctrl__pi1)
+- Register:state_q (id=register:matrix_engine_ctrl__pi1.state_q, module=matrix_engine_ctrl__pi1</pre>
+        </li><li>
+          <div class="step-head">Step 8: Traced the signal's driver (<code>state_d</code>)</div>
+          <pre class="step-result">- Assignment:assignment:tpe_dma.assign_181 inside AlwaysBlock:always:tpe_dma.always_179 [rtl/dma/tpe_dma.sv:152:3]
+- Assignment:assignment:tpe_dma.assign_183 inside AlwaysBlock:always:tpe_dma.always_179 [rtl/dma/tpe_dma.sv:152:3]
+- Assignment:assignment:tpe_dma.assign_185 inside AlwaysBlock:always:tpe_dma.always_179 [rtl/dma/tpe_dma.sv:152:3]
+- Assignment:assignment:tpe_dma.assign_187 inside AlwaysBlock:always:tpe_dma.always_179 [rtl/dma/tpe_dma.sv:152:3]
+- Assignment:assignment:tpe_dma.assign_1</pre>
+        </li><li>
+          <div class="step-head">Step 9: Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</div>
+          <pre class="step-result">--- rtl/dma/tpe_dma.sv (lines 1-40 of 253) ---
+    1: // DMA Engine: descriptor-based mover between DDR (AXI4 master) and the
+    2: // Local SRAM scratchpad, per docs/architecture/tpe_architecture_spec.md
+    3: // section 3.3. V1 scope: single channel, one descriptor in flight at a
+    4: // time, INCR bursts capped at MAX_BURST_BEATS beats, transfer length must
+    5: // be a whole number of AXI_DATA_WIDTH-wide rows (16 bytes) -- this DMA
+    6: // moves whole SRAM rows, it does not do sub-ro</pre>
+        </li><li>
+          <div class="step-head">Step 10: Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</div>
+          <pre class="step-result">--- rtl/dma/tpe_dma.sv (lines 100-200 of 253) ---
+  100:   wire [7:0] burst_beats_this = (beats_remaining_q &gt; BeatsWidth&#x27;(MAX_BURST_BEATS))
+  101:       ? 8&#x27;(MAX_BURST_BEATS) : 8&#x27;(beats_remaining_q);
+  102:   wire len_misaligned = |desc_len[BeatShift-1:0];
+  103: 
+  104:   always_ff @(posedge clk or negedge rst_n) begin
+  105:     if (!rst_n) begin
+  106:       state_q            &lt;= ST_IDLE;
+  107:       mem_addr_q         &lt;= &#x27;0;
+  108:       sram_addr_q        &lt;= &#x27;0;
+  109:       beats_remainin</pre>
+        </li><li>
+          <div class="step-head">Step 11: Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</div>
+          <pre class="step-result">--- rtl/dma/tpe_dma.sv (lines 200-253 of 253) ---
+  200:       end
+  201:       if (state_d != state_q) begin
+  202:         `TPE_LOG_HIGH(&quot;dma&quot;, $sformatf(&quot;state %0s -&gt; %0s&quot;, state_q.name(), state_d.name()));
+  203:       end
+  204:       if ((state_q == ST_RD_DATA &amp;&amp; m_rvalid &amp;&amp; m_rready)
+  205:           || (state_q == ST_WR_DATA &amp;&amp; m_wvalid &amp;&amp; m_wready)) begin
+  206:         `TPE_LOG_DEBUG(&quot;dma&quot;, $sformatf(&quot;beat mem_addr=%0h sram_addr=%0h beats_left=%0d&quot;,
+  207:                              </pre>
+        </li><li>
+          <div class="step-head">Step 12: Searched the design graph (<code>sram_rdata</code>)</div>
+          <pre class="step-result">- Port:sram_rdata (id=port:tpe_dma.sram_rdata, module=tpe_dma)
+- Signal:dma_sram_rdata (id=signal:tpe_top.dma_sram_rdata, module=tpe_top)</pre>
+        </li><li>
+          <div class="step-head">Step 13: Traced the signal's driver (<code>sram_rdata</code>)</div>
+          <pre class="step-result">- Signal:dma_sram_rdata [rtl/top/tpe_top.sv:265:32]</pre>
+        </li><li>
+          <div class="step-head">Step 14: Read the RTL source (<code>rtl/top/tpe_top.sv</code>)</div>
+          <pre class="step-result">--- rtl/top/tpe_top.sv (lines 260-280 of 404) ---
+  260:   // ---- DMA &lt;-&gt; SRAM router (DMA&#x27;s single port) ----------------------------
+  261:   logic                        dma_sram_en, dma_sram_we;
+  262:   logic [SRAM_STRB_WIDTH-1:0]  dma_sram_strb;
+  263:   logic [SRAM_ADDR_WIDTH-1:0]  dma_sram_addr;
+  264:   logic [SRAM_DATA_WIDTH-1:0]  dma_sram_wdata;
+  265:   logic [SRAM_DATA_WIDTH-1:0]  dma_sram_rdata;
+  266: 
+  267:   tpe_dma u_dma (
+  268:       .clk  (clk),
+  269:       .rst_n(rst_n),</pre>
+        </li><li>
+          <div class="step-head">Step 15: Read the RTL source (<code>rtl/top/tpe_top.sv</code>)</div>
+          <pre class="step-result">--- rtl/top/tpe_top.sv (lines 280-300 of 404) ---
+  280:       .sram_en   (dma_sram_en),
+  281:       .sram_we   (dma_sram_we),
+  282:       .sram_strb (dma_sram_strb),
+  283:       .sram_addr (dma_sram_addr),
+  284:       .sram_wdata(dma_sram_wdata),
+  285:       .sram_rdata(dma_sram_rdata)
+  286:   );
+  287: 
+  288:   // ---- Matrix Engine -------------------------------------------------------
+  289:   logic wbuf_a_en, wbuf_a_we;
+  290:   logic [COLS-1:0] wbuf_a_strb;
+  291:   logic [TILE_DIM</pre>
+        </li><li>
+          <div class="step-head">Step 16: Searched the design graph (<code>dp_ram</code>)</div>
+          <pre class="step-result">- Module:dp_ram__DB10_A4_S10 (id=module:dp_ram__DB10_A4_S10, module=None)
+- Module:dp_ram__DB100_A8_S10 (id=module:dp_ram__DB100_A8_S10, module=None)
+- Module:dp_ram__D20_DB100_A8_S4 (id=module:dp_ram__D20_DB100_A8_S4, module=None)
+- Module:dp_ram__D200_DB100_A8_S40 (id=module:dp_ram__D200_DB100_A8_S40, module=None)</pre>
+        </li><li>
+          <div class="step-head">Step 17: Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</div>
+          <pre class="step-result">--- rtl/dma/tpe_dma.sv (lines 1-50 of 253) ---
+    1: // DMA Engine: descriptor-based mover between DDR (AXI4 master) and the
+    2: // Local SRAM scratchpad, per docs/architecture/tpe_architecture_spec.md
+    3: // section 3.3. V1 scope: single channel, one descriptor in flight at a
+    4: // time, INCR bursts capped at MAX_BURST_BEATS beats, transfer length must
+    5: // be a whole number of AXI_DATA_WIDTH-wide rows (16 bytes) -- this DMA
+    6: // moves whole SRAM rows, it does not do sub-ro</pre>
+        </li><li>
+          <div class="step-head">Step 18: Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</div>
+          <pre class="step-result">--- rtl/dma/tpe_dma.sv (lines 50-100 of 253) ---
+   50:     input  logic [    AXI_ID_WIDTH-1:0]   m_bid,
+   51:     output logic                          m_bready,
+   52: 
+   53:     // AXI4 master -- read address/data
+   54:     output logic                         m_arvalid,
+   55:     output logic [  AXI_ADDR_WIDTH-1:0]  m_araddr,
+   56:     output logic [                 7:0]  m_arlen,
+   57:     output logic [   AXI_ID_WIDTH-1:0]   m_arid,
+   58:     input  logic                         m_a</pre>
+        </li><li>
+          <div class="step-head">Step 19: Read the RTL source (<code>rtl/top/tpe_top.sv</code>)</div>
+          <pre class="step-result">--- rtl/top/tpe_top.sv (lines 1-50 of 404) ---
+    1: // TPE top level: Command Processor -&gt; Scheduler -&gt; {DMA Engine, Matrix
+    2: // Compute Engine}, per docs/architecture/tpe_architecture_spec.md. V1
+    3: // scope: matmul only (load weight, load activation, matmul, store), no
+    4: // activation unit (V2), no double buffering / overlap (V2&#x27;s &quot;improved
+    5: // scheduler&quot; -- see tpe_scheduler.sv&#x27;s header comment).
+    6: //
+    7: // V1 architecture note: matrix_engine&#x27;s four internal buf</pre>
+        </li><li>
+          <div class="step-head">Step 20: Searched the design graph (<code>sram_rdata</code>)</div>
+          <pre class="step-result">- Port:sram_rdata (id=port:tpe_dma.sram_rdata, module=tpe_dma)
+- Signal:dma_sram_rdata (id=signal:tpe_top.dma_sram_rdata, module=tpe_top)</pre>
+        </li></ol>
+    </details>
+      
+        <div class="kv"><span class="k">Answer-key check</span><span class="v"><span class="badge badge-warning">File match, line off</span>
+        <span class="muted"> expected bug #4 — rtl/dma/tpe_dma.sv:[161]</span></span></div>
+      
+      <div class="kv"><span class="k">Tokens</span><span class="v muted">23,688 (~$0.0884)</span></div>
+      
+        <details class="patch">
+          <summary>Proposed patch</summary>
+          <pre class="diff">--- a/rtl/dma/tpe_dma.sv
++++ b/rtl/dma/tpe_dma.sv
+@@ -236,18 +236,18 @@
+   // ---- SRAM-side port ----------------------------------------------------
+   assign sram_addr  = sram_addr_q;
+   assign sram_strb  = {SRAM_STRB_WIDTH{1&#x27;b1}};
+-  always_comb begin
+-    sram_en    = 1&#x27;b0;
+-    sram_we    = 1&#x27;b0;
+-    sram_wdata = &#x27;0;
+-    if (state_q == ST_RD_DATA &amp;&amp; m_rvalid &amp;&amp; m_rready) begin
+-      sram_en    = 1&#x27;b1;
+-      sram_we    = 1&#x27;b1;
+-      sram_wdata = m_rdata;
+-    end else if (state_q == ST_WR_SRAM_RD) begin
+-      sram_en = 1&#x27;b1;
+-      sram_we = 1&#x27;b0;
+-    end
+-  end
++  always_comb begin
++    sram_en    = 1&#x27;b0;
++    sram_we    = 1&#x27;b0;
++    sram_wdata = &#x27;0;
++    if (state_q == ST_RD_DATA &amp;&amp; m_rvalid &amp;&amp; m_rready) begin
++      sram_en    = 1&#x27;b1;
++      sram_we    = 1&#x27;b1;
++      sram_wdata = m_rdata;
++    end else if (state_q == ST_WR_SRAM_RD || (state_q == ST_WR_DATA &amp;&amp; !(m_wvalid &amp;&amp; m_wready) )) begin
++      sram_en = 1&#x27;b1;
++      sram_we = 1&#x27;b0;
++    end
++  end
+ 
+ endmodule
+</pre>
+        </details>
+    </article>
+</div>
+</div></body></html>

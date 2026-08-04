@@ -1,14 +1,19 @@
 """Builds the reviewer-facing static dashboard from everything under
-data/runs/* (+ an optional graph_eval report), and writes a single
-self-contained docs/index.html for GitHub Pages.
+data/runs/* (+ an optional graph_eval report and the picked regression's
+JUnit XML), and writes docs/index.html (a regression-level index linking out
+to one full report page per debugged test) plus docs/reports/<test>.html for
+GitHub Pages.
 
-CLI: python -m dashboard.generate --runs-root data/runs --graph-eval data/graph_eval_report.json --out docs/index.html
+CLI: python -m dashboard.generate --runs-root data/runs --graph-eval data/graph_eval_report.json \
+    --regression-xml /path/to/regression.xml --suite smoke \
+    --actions-url https://github.com/<owner>/<repo>/actions --out-dir docs
 """
 from __future__ import annotations
 
 import argparse
 import html
 import json
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -99,6 +104,47 @@ def load_all_runs(runs_root: Path) -> list[RunView]:
         return []
     runs = [load_run(d) for d in sorted(runs_root.iterdir()) if d.is_dir()]
     return sorted(runs, key=lambda r: r.test)
+
+
+_PHASE_RANK = {"verified": 3, "failed": 2, "awaiting_approval": 1, "rejected": 0, "unknown": -1}
+
+
+def pick_best_run_per_test(runs: list[RunView]) -> dict[str, RunView]:
+    """A test may have been attempted more than once (rejected, then retried).
+    The regression table links to one canonical report per test — the most
+    conclusive outcome, most-recent run as the tiebreak."""
+    best: dict[str, RunView] = {}
+    for r in runs:  # runs is already sorted; later entries win same-rank ties
+        current = best.get(r.test)
+        if current is None or _PHASE_RANK.get(r.phase, -1) >= _PHASE_RANK.get(current.phase, -1):
+            best[r.test] = r
+    return best
+
+
+@dataclass
+class RegressionEntry:
+    name: str
+    classname: str
+    failed: bool
+    message: str = ""
+
+
+def parse_regression_xml(path: Path) -> list[RegressionEntry]:
+    if not path.is_file():
+        return []
+    root = ET.parse(path).getroot()
+    entries = []
+    for tc in root.findall("testcase"):
+        failure = tc.find("failure")
+        entries.append(
+            RegressionEntry(
+                name=tc.get("name", ""),
+                classname=tc.get("classname", ""),
+                failed=failure is not None,
+                message=(failure.get("message", "") if failure is not None else ""),
+            )
+        )
+    return entries
 
 
 _STATUS = {
@@ -235,6 +281,24 @@ def _run_card(r: RunView) -> str:
     </article>"""
 
 
+def _slug(test_name: str) -> str:
+    return test_name.replace("/", "_")
+
+
+def render_report_page(r: RunView) -> str:
+    body = f"""
+<a class="back-link" href="../index.html">&larr; Back to regression report</a>
+<div class="grid">
+{_run_card(r)}
+</div>"""
+    return _page_shell(
+        title=f"{r.test} — RTL-Lens",
+        heading=f"🔍 {html.escape(r.test)}",
+        subtitle=f"Individual debug report — {html.escape(r.suite)} regression.",
+        body=body,
+    )
+
+
 def _summary_stats(runs: list[RunView]) -> dict:
     verified = sum(1 for r in runs if r.phase == "verified")
     correct = sum(1 for r in runs if r.grade_verdict == "correct")
@@ -354,64 +418,151 @@ ol.evidence-list li { border-left: 2px solid var(--border); padding-left: 0.75re
 pre.step-result { background: var(--surface-0); border: 1px solid var(--border); border-radius: 6px;
   padding: 0.5rem 0.7rem; font-size: 0.78rem; overflow-x: auto; white-space: pre-wrap; margin: 0; max-height: 220px; overflow-y: auto; }
 footer { margin-top: 2.5rem; font-size: 0.8rem; color: var(--text-muted); }
+.back-link { display: inline-block; margin-bottom: 1.25rem; font-size: 0.85rem; color: var(--accent); text-decoration: none; }
+.back-link:hover { text-decoration: underline; }
+.actions-link { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--accent);
+  text-decoration: none; border: 1px solid var(--border); border-radius: 8px; padding: 0.45rem 0.8rem; }
+.actions-link:hover { border-color: var(--accent); }
+table.regtable { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+table.regtable th { text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--text-muted); border-bottom: 1px solid var(--border); padding: 0.5rem 0.6rem; }
+table.regtable td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+table.regtable a { color: var(--accent); text-decoration: none; font-weight: 500; }
+table.regtable a:hover { text-decoration: underline; }
+table.regtable .classname { color: var(--text-muted); font-size: 0.8rem; }
 """
 
 
-def render(runs: list[RunView], graph_eval_path: Path | None) -> str:
-    stats = _summary_stats(runs)
-    cards = "\n".join(_run_card(r) for r in runs) or '<p class="muted">No runs yet.</p>'
-    graph_panel = _graph_eval_panel(graph_eval_path)
-
+def _page_shell(title: str, heading: str, subtitle: str, body: str) -> str:
     return f"""<!doctype html>
 <html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RTL-Lens — Dashboard</title>
+<title>{html.escape(title)}</title>
 <style>{_CSS}</style>
 </head><body><div class="wrap">
-<h1>🔍 RTL-Lens</h1>
-<p class="subtitle">Graph-grounded RTL debugging: each run below diagnosed a failing simulation
-test using only a deterministic design graph, the spec, and RTL source — never the project's
-answer key — then proposed a patch, waited for human approval, and reran the test to verify.</p>
+<h1>{heading}</h1>
+<p class="subtitle">{subtitle}</p>
+{body}
+</div></body></html>"""
 
+
+def _regression_table(entries: list[RegressionEntry], best_by_test: dict[str, RunView]) -> str:
+    if not entries:
+        return '<p class="muted">No regression.xml provided — pass --regression-xml to show the full test list.</p>'
+
+    rows = []
+    for e in entries:
+        run = best_by_test.get(e.name)
+        if not e.failed:
+            status = '<span class="badge badge-good">PASS</span>'
+            name_cell = html.escape(e.name)
+        elif run is not None:
+            status = _badge(run.phase, _STATUS)
+            name_cell = f'<a href="reports/{_slug(e.name)}.html">{html.escape(e.name)}</a>'
+        else:
+            status = '<span class="badge badge-critical">FAIL — not yet debugged</span>'
+            name_cell = html.escape(e.name)
+        rows.append(
+            f'<tr><td>{name_cell}<div class="classname">{html.escape(e.classname)}</div></td><td>{status}</td></tr>'
+        )
+    return f"""<table class="regtable">
+<tr><th>Test</th><th>Status</th></tr>
+{''.join(rows)}
+</table>"""
+
+
+def render_index(
+    runs: list[RunView],
+    entries: list[RegressionEntry],
+    suite_name: str,
+    actions_url: str | None,
+    graph_eval_path: Path | None,
+) -> str:
+    stats = _summary_stats(runs)
+    graph_panel = _graph_eval_panel(graph_eval_path)
+    best_by_test = pick_best_run_per_test(runs)
+    reg_table = _regression_table(entries, best_by_test)
+
+    total_tests = len(entries)
+    total_fails = sum(1 for e in entries if e.failed)
+    regression_line = (
+        f"Regression picked: <strong>{html.escape(suite_name)}</strong>"
+        + (f" ({total_tests} tests, {total_fails} failing)" if entries else "")
+    )
+    actions_html = (
+        f'<a class="actions-link" href="{html.escape(actions_url)}" target="_blank" rel="noopener">'
+        f"View CI failure list on GitHub Actions &rarr;</a>"
+        if actions_url
+        else ""
+    )
+
+    body = f"""
 <section class="panel">
   <h2>Summary</h2>
+  <p class="muted" style="margin-top:-0.5rem">{regression_line}</p>
   <div class="stat-row">
-    <div class="stat"><div class="stat-num">{stats['total']}</div><div class="stat-label">Runs</div></div>
+    <div class="stat"><div class="stat-num">{stats['total']}</div><div class="stat-label">Debug runs</div></div>
     <div class="stat"><div class="stat-num">{stats['verified']}</div><div class="stat-label">Fixes verified</div></div>
     <div class="stat"><div class="stat-num">{stats['correct']}/{stats['graded']}</div><div class="stat-label">Matched answer key</div></div>
     <div class="stat"><div class="stat-num">{stats['avg_confidence']*100:.0f}%</div><div class="stat-label">Avg. confidence</div></div>
     <div class="stat"><div class="stat-num">${stats['total_cost']:.3f}</div><div class="stat-label">Total LLM cost</div></div>
   </div>
+  {actions_html}
 </section>
 
 {graph_panel}
 
-<h2>Runs</h2>
-<div class="grid">
-{cards}
-</div>
+<section class="panel">
+  <h2>{html.escape(suite_name)} regression — full test list</h2>
+  <p class="muted" style="margin-top:-0.5rem">Click a failing test to open its debug report (investigation plan, evidence, hypothesis, patch, verification).</p>
+  {reg_table}
+</section>
 
 <footer>Generated by dashboard/generate.py. Diagnosis loop scoped away from
 docs/verification/bug_list.md by construction (see agent/tools/rtl_tools.py and
-spec_tools.py); grading against it happens only after a diagnosis is final.</footer>
-</div></body></html>"""
+spec_tools.py); grading against it happens only after a diagnosis is final.</footer>"""
+
+    return _page_shell(
+        title="RTL-Lens — Regression Report",
+        heading="🔍 RTL-Lens",
+        subtitle="An AI RTL debug agent that uses graph RAG — not embeddings — as its primary tool for "
+        "tracing simulation failures to their root cause. Each linked report below diagnosed a failing "
+        "test using only the design graph, spec, and RTL source — never the project's answer key.",
+        body=body,
+    )
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--runs-root", default="data/runs")
     parser.add_argument("--graph-eval", default="data/graph_eval_report.json")
-    parser.add_argument("--out", default="docs/index.html")
+    parser.add_argument("--regression-xml", default=None, help="Path to the picked regression's JUnit XML")
+    parser.add_argument("--suite", default="smoke", help="Name of the regression suite that was picked")
+    parser.add_argument(
+        "--actions-url",
+        default="https://github.com/bhavanibedreshankar/tpe-tensor-processing-engine/actions",
+        help="GitHub Actions URL for the CI failure list",
+    )
+    parser.add_argument("--out-dir", default="docs")
     args = parser.parse_args()
 
     runs = load_all_runs(Path(args.runs_root))
     graph_eval_path = Path(args.graph_eval)
-    html_out = render(runs, graph_eval_path if graph_eval_path.is_file() else None)
+    entries = parse_regression_xml(Path(args.regression_xml)) if args.regression_xml else []
 
-    out_path = Path(args.out)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(html_out)
-    print(f"Dashboard written to {out_path} ({len(runs)} run(s))")
+    out_dir = Path(args.out_dir)
+    reports_dir = out_dir / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+
+    best_by_test = pick_best_run_per_test(runs)
+    for test_name, run in best_by_test.items():
+        (reports_dir / f"{_slug(test_name)}.html").write_text(render_report_page(run))
+
+    index_html = render_index(runs, entries, args.suite, args.actions_url, graph_eval_path if graph_eval_path.is_file() else None)
+    (out_dir / "index.html").write_text(index_html)
+
+    print(f"Index written to {out_dir / 'index.html'}")
+    print(f"{len(best_by_test)} report page(s) written to {reports_dir}/")
 
 
 if __name__ == "__main__":

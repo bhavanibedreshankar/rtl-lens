@@ -6,7 +6,7 @@ synthesis escalates to the stronger model.
 from __future__ import annotations
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import BaseTool
 
 from agent.logging_config import get_logger, log_event
@@ -28,7 +28,37 @@ def build_investigate_node(model: BaseChatModel, tools: list[BaseTool], limits: 
     def investigate(state: DebugState) -> dict:
         # Prefer the LangMem-compressed view once it exists, to conserve tokens on
         # long investigations; `messages` (full, untruncated) remains the audit trail.
-        messages = list(state.get("summarized_messages") or state["messages"])
+        #
+        # Guarded rather than trusted blindly: LangMem's summarization has been observed
+        # to collapse the compressed view down to system-message(s) only — non-empty as a
+        # Python list, but Anthropic extracts SystemMessages into a separate `system`
+        # field, so a messages array with no other content is rejected outright as empty.
+        # `_has_content` catches that case specifically, not just literal emptiness.
+        def _has_content(msgs: list) -> bool:
+            return any(not isinstance(m, SystemMessage) for m in msgs)
+
+        summarized = state.get("summarized_messages")
+        messages = list(summarized) if summarized and _has_content(summarized) else list(state["messages"])
+        if not _has_content(messages):
+            log_event(
+                logger,
+                "empty_message_view_fallback",
+                had_summarized=bool(summarized),
+                summarized_len=len(summarized) if summarized else 0,
+                level=30,
+            )
+            messages = list(state["messages"])
+        if not _has_content(messages):
+            # Last resort: state["messages"] itself has no real content. Rebuild a
+            # minimal prompt from the failure so the run can still make progress
+            # instead of crashing outright.
+            from agent.nodes.ingest_failure import _SYSTEM_PROMPT
+
+            failure = state.get("failure")
+            log_event(logger, "reconstructing_messages_from_failure", level=40)
+            messages = [SystemMessage(content=_SYSTEM_PROMPT)]
+            if failure is not None:
+                messages.append(HumanMessage(content=f"(Context was lost — resuming.) Failure: {failure.message}"))
         steps = state.get("investigation_steps", 0)
         effective_limit = _effective_limit(state, limits)
 

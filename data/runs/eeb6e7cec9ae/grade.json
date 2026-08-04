@@ -1,0 +1,14 @@
+{
+  "run_id": "eeb6e7cec9ae",
+  "test": "top.matmul_full_width_test",
+  "agent_file": "rtl/scheduler/tpe_scheduler.sv",
+  "agent_line": 95,
+  "expected_bug_number": 5,
+  "expected_file": "rtl/scheduler/tpe_scheduler.sv",
+  "expected_lines": [
+    84
+  ],
+  "file_match": true,
+  "line_match": true,
+  "verdict": "correct"
+}

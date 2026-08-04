@@ -1,0 +1,265 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>top.matmul_full_width_test — RTL-Lens</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #fcfcfb; --surface-1: #ffffff; --border: #e5e4e0;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #83817a;
+  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+  --accent: #2a78d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface-0: #121211; --surface-1: #1a1a19; --border: #2e2e2b;
+    --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #8f8d84;
+    --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #e66767;
+    --accent: #3987e5;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #121211; --surface-1: #1a1a19; --border: #2e2e2b;
+  --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #8f8d84;
+  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #e66767;
+  --accent: #3987e5;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface-0); color: var(--text-primary);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+h1 { font-size: 1.7rem; margin: 0 0 0.25rem; }
+h2 { font-size: 1.1rem; margin: 0 0 1rem; }
+.subtitle { color: var(--text-secondary); margin: 0 0 2rem; max-width: 60ch; }
+.stat-row { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.stat { min-width: 110px; }
+.stat-num { font-size: 1.8rem; font-weight: 700; }
+.stat-label { font-size: 0.8rem; color: var(--text-secondary); }
+.panel { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px;
+  padding: 1.25rem 1.5rem; margin-bottom: 2rem; }
+.grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+.card-head h3 { margin: 0; font-size: 1.05rem; }
+.badge { font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.55rem; border-radius: 999px;
+  border: 1px solid transparent; white-space: nowrap; }
+.badge-good { color: var(--good); border-color: var(--good); }
+.badge-warning { color: #8a5a00; border-color: var(--warning); background: color-mix(in srgb, var(--warning) 15%, transparent); }
+:root[data-theme="dark"] .badge-warning, @media (prefers-color-scheme: dark) { .badge-warning { color: var(--warning); } }
+.badge-critical { color: var(--critical); border-color: var(--critical); }
+.badge-serious { color: var(--serious); border-color: var(--serious); }
+.kv { display: flex; gap: 0.5rem; padding: 0.2rem 0; font-size: 0.9rem; align-items: center; flex-wrap: wrap; }
+.kv .k { color: var(--text-secondary); min-width: 130px; }
+.kv .v { color: var(--text-primary); }
+code { background: var(--surface-0); border: 1px solid var(--border); border-radius: 4px;
+  padding: 0.1rem 0.35rem; font-size: 0.85rem; }
+.muted { color: var(--text-muted); font-size: 0.85rem; }
+.explanation { font-size: 0.9rem; color: var(--text-secondary); margin: 0.5rem 0; }
+.conf-wrap { display: flex; align-items: center; gap: 0.5rem; width: 160px; }
+.conf-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.conf-fill { height: 100%; border-radius: 3px; }
+.conf-good { background: var(--good); }
+.conf-warning { background: var(--warning); }
+.conf-critical { background: var(--critical); }
+.conf-label { font-size: 0.78rem; color: var(--text-secondary); }
+details.patch, details.evidence { margin-top: 0.75rem; }
+details.patch summary, details.evidence summary { cursor: pointer; font-size: 0.85rem; color: var(--accent); }
+pre.diff { background: var(--surface-0); border: 1px solid var(--border); border-radius: 8px;
+  padding: 0.75rem 1rem; overflow-x: auto; font-size: 0.8rem; margin-top: 0.5rem; }
+.breadcrumb { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.kv-block { margin: 0.6rem 0; }
+.kv-block .k { color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.3rem; }
+pre.fail-sig { background: var(--surface-0); border: 1px solid var(--border); border-left: 3px solid var(--serious);
+  border-radius: 6px; padding: 0.6rem 0.85rem; font-size: 0.82rem; overflow-x: auto; white-space: pre-wrap; margin: 0; }
+ol.plan { margin: 0; padding-left: 1.25rem; font-size: 0.88rem; color: var(--text-secondary); }
+ol.plan li { margin-bottom: 0.15rem; }
+ol.plan code { font-size: 0.82rem; }
+ol.evidence-list { list-style: none; margin: 0.5rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+ol.evidence-list li { border-left: 2px solid var(--border); padding-left: 0.75rem; }
+.step-head { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.2rem; }
+pre.step-result { background: var(--surface-0); border: 1px solid var(--border); border-radius: 6px;
+  padding: 0.5rem 0.7rem; font-size: 0.78rem; overflow-x: auto; white-space: pre-wrap; margin: 0; max-height: 220px; overflow-y: auto; }
+footer { margin-top: 2.5rem; font-size: 0.8rem; color: var(--text-muted); }
+.back-link { display: inline-block; margin-bottom: 1.25rem; font-size: 0.85rem; color: var(--accent); text-decoration: none; }
+.back-link:hover { text-decoration: underline; }
+.actions-link { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--accent);
+  text-decoration: none; border: 1px solid var(--border); border-radius: 8px; padding: 0.45rem 0.8rem; }
+.actions-link:hover { border-color: var(--accent); }
+table.regtable { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+table.regtable th { text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--text-muted); border-bottom: 1px solid var(--border); padding: 0.5rem 0.6rem; }
+table.regtable td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+table.regtable a { color: var(--accent); text-decoration: none; font-weight: 500; }
+table.regtable a:hover { text-decoration: underline; }
+table.regtable .classname { color: var(--text-muted); font-size: 0.8rem; }
+</style>
+</head><body><div class="wrap">
+<h1>🔍 top.matmul_full_width_test</h1>
+<p class="subtitle">Individual debug report — smoke regression.</p>
+
+<a class="back-link" href="../index.html">&larr; Back to regression report</a>
+<div class="grid">
+
+    <article class="card">
+      <header class="card-head">
+        <div>
+          <div class="breadcrumb">smoke regression</div>
+          <h3>top.matmul_full_width_test</h3>
+        </div>
+        <span class="badge badge-good">Verified</span>
+      </header>
+      
+        <div class="kv-block">
+          <span class="k">Fail signature (UVMError)</span>
+          <pre class="fail-sig">UVMError: MATMUL_FULL_WIDTH: MATMUL with dim_n==COLS(16) status=STAT_BAD_DIM, w…</pre>
+        </div>
+      
+    <div class="kv-block">
+      <span class="k">Investigation plan</span>
+      <ol class="plan"><li>Searched the design spec for expected behavior (<code>MATMUL command dim_n COLS validation</code>)</li><li>Searched the design spec for expected behavior (<code>STAT_BAD_DIM error condition</code>)</li><li>Searched the design graph (<code>STAT_BAD_DIM</code>)</li><li>Searched the design graph (<code>CMD_MATMUL</code>)</li><li>Searched the design graph (<code>scheduler</code>)</li><li>Searched the design graph (<code>cmd_proc</code>)</li><li>Inspected the module instance hierarchy (<code>tpe_scheduler__R10_C10</code>)</li><li>Searched the design graph (<code>dim_n</code>)</li><li>Searched the design graph (<code>BAD_DIM</code>)</li><li>Searched the design graph (<code>status</code>)</li><li>Searched the design graph (<code>decode</code>)</li><li>Traced the signal's driver (<code>status_q</code>)</li><li>Read the RTL source (<code>rtl/scheduler/tpe_scheduler.sv</code>)</li><li>Read the RTL source (<code>rtl/scheduler/tpe_scheduler.sv</code>)</li><li>Read the RTL source (<code>rtl/scheduler/tpe_scheduler.sv</code>)</li><li>Searched the design spec for expected behavior (<code>MATMUL dimension constraints</code>)</li><li>Searched the design spec for expected behavior (<code>dim_n dim_k ROWS COLS</code>)</li><li>Searched the design spec for expected behavior (<code>matrix engine dimensions</code>)</li><li>Searched the design graph (<code>matrix_engine</code>)</li></ol>
+    </div>
+      <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/scheduler/tpe_scheduler.sv:95</code></span></div>
+      <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="91% (high)">
+  <div class="conf-track"><div class="conf-fill conf-good" style="width:91%"></div></div>
+  <span class="conf-label">91%</span>
+</div></span></div>
+      <p class="explanation">The MATMUL dimension check in tpe_scheduler.sv used an inconsistent comparison for dim_n vs dim_k: dim_k is validated with &#x27;&lt;=&#x27; (allowing dim_k == ROWS) while dim_n was validated with strict &#x27;&lt;&#x27; (disallowing dim_n == COLS). The failing test issues a MATMUL with dim_n == COLS (16), which is a legal full-width matmul, but dim_n &lt; COLS evaluates false, causing dim_ok_for_matmul to be false and status_q to be set to STAT_BAD_DIM instead of STAT_OK. Changing the dim_n comparison to &#x27;&lt;=&#x27; makes the boundary condition consistent with dim_k and allows dim_n == COLS, matching the expected STAT_OK behavior for a full-width matmul.</p>
+      
+    <details class="evidence">
+      <summary>Retrieved evidence (19 steps)</summary>
+      <ol class="evidence-list"><li>
+          <div class="step-head">Step 1: Searched the design spec for expected behavior (<code>MATMUL command dim_n COLS validation</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;MATMUL command dim_n COLS validation&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 2: Searched the design spec for expected behavior (<code>STAT_BAD_DIM error condition</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;STAT_BAD_DIM error condition&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 3: Searched the design graph (<code>STAT_BAD_DIM</code>)</div>
+          <pre class="step-result">(no matches)</pre>
+        </li><li>
+          <div class="step-head">Step 4: Searched the design graph (<code>CMD_MATMUL</code>)</div>
+          <pre class="step-result">(no matches)</pre>
+        </li><li>
+          <div class="step-head">Step 5: Searched the design graph (<code>scheduler</code>)</div>
+          <pre class="step-result">- Instance:u_scheduler (id=instance:tpe_top.u_scheduler, module=None)
+- Module:tpe_scheduler__R10_C10 (id=module:tpe_scheduler__R10_C10, module=None)</pre>
+        </li><li>
+          <div class="step-head">Step 6: Searched the design graph (<code>cmd_proc</code>)</div>
+          <pre class="step-result">- Instance:u_cmd_proc (id=instance:tpe_top.u_cmd_proc, module=None)
+- Module:tpe_cmd_proc (id=module:tpe_cmd_proc, module=None)</pre>
+        </li><li>
+          <div class="step-head">Step 7: Inspected the module instance hierarchy (<code>tpe_scheduler__R10_C10</code>)</div>
+          <pre class="step-result">{&quot;module&quot;: {&quot;name&quot;: &quot;tpe_scheduler__R10_C10&quot;, &quot;orig_name&quot;: &quot;tpe_scheduler&quot;, &quot;level&quot;: 2, &quot;is_top&quot;: false, &quot;node_type&quot;: &quot;Module&quot;, &quot;id&quot;: &quot;module:tpe_scheduler__R10_C10&quot;}, &quot;instances&quot;: []}</pre>
+        </li><li>
+          <div class="step-head">Step 8: Searched the design graph (<code>dim_n</code>)</div>
+          <pre class="step-result">- Port:dim_n (id=port:matrix_engine__R10_C10_M100.dim_n, module=matrix_engine__R10_C10_M100)
+- Port:dim_n (id=port:matrix_engine_ctrl__pi1.dim_n, module=matrix_engine_ctrl__pi1)
+- Signal:me_dim_n (id=signal:tpe_top.me_dim_n, module=tpe_top)
+- Port:me_dim_n (id=port:tpe_scheduler__R10_C10.me_dim_n, module=tpe_scheduler__R10_C10)
+- Register:stg_dim_n_q (id=register:tpe_cmd_proc.stg_dim_n_q, module=tpe_cmd_proc)</pre>
+        </li><li>
+          <div class="step-head">Step 9: Searched the design graph (<code>BAD_DIM</code>)</div>
+          <pre class="step-result">(no matches)</pre>
+        </li><li>
+          <div class="step-head">Step 10: Searched the design graph (<code>status</code>)</div>
+          <pre class="step-result">- Signal:sched_done_status (id=signal:tpe_top.sched_done_status, module=tpe_top)
+- Port:sched_done_status (id=port:tpe_cmd_proc.sched_done_status, module=tpe_cmd_proc)
+- Port:sched_done_status (id=port:tpe_debug.sched_done_status, module=tpe_debug)
+- Port:sched_done_status (id=port:tpe_scheduler__R10_C10.sched_done_status, module=tpe_scheduler__R10_C10)
+- Register:status_q (id=register:tpe_scheduler__R10_C10.status_q, module=tpe_scheduler__R10_C10)
+- Signal:status_word (id=signal:tpe_cmd_proc.st</pre>
+        </li><li>
+          <div class="step-head">Step 11: Searched the design graph (<code>decode</code>)</div>
+          <pre class="step-result">(no matches)</pre>
+        </li><li>
+          <div class="step-head">Step 12: Traced the signal's driver (<code>status_q</code>)</div>
+          <pre class="step-result">- Assignment:assignment:tpe_scheduler__R10_C10.assign_680 inside AlwaysBlock:always:tpe_scheduler__R10_C10.always_666 [rtl/scheduler/tpe_scheduler.sv:97:3]
+- Assignment:assignment:tpe_scheduler__R10_C10.assign_682 inside AlwaysBlock:always:tpe_scheduler__R10_C10.always_666 [rtl/scheduler/tpe_scheduler.sv:97:3]
+- Assignment:assignment:tpe_scheduler__R10_C10.assign_684 inside AlwaysBlock:always:tpe_scheduler__R10_C10.always_666 [rtl/scheduler/tpe_scheduler.sv:97:3]
+- Assignment:assignment:tpe_sche</pre>
+        </li><li>
+          <div class="step-head">Step 13: Read the RTL source (<code>rtl/scheduler/tpe_scheduler.sv</code>)</div>
+          <pre class="step-result">--- rtl/scheduler/tpe_scheduler.sv (lines 77-117 of 246) ---
+   77:     ST_DISPATCH_ME,
+   78:     ST_WAIT_ME,
+   79:     ST_COMPLETE
+   80:   } state_e;
+   81: 
+   82:   state_e state_q, state_d;
+   83: 
+   84:   tpe_command_t cmd_q;
+   85:   cmd_status_e status_q;
+   86: 
+   87:   localparam logic [1:0] RouterWeight = 2&#x27;d0;
+   88:   localparam logic [1:0] RouterAct = 2&#x27;d1;
+   89:   localparam logic [1:0] RouterSeed = 2&#x27;d2;
+   90:   localparam logic [1:0] RouterOut = 2&#x27;d3;
+   91: 
+   92:   logi</pre>
+        </li><li>
+          <div class="step-head">Step 14: Read the RTL source (<code>rtl/scheduler/tpe_scheduler.sv</code>)</div>
+          <pre class="step-result">--- rtl/scheduler/tpe_scheduler.sv (lines 117-180 of 246) ---
+  117: 
+  118:         unique case (cmd_q.opcode)
+  119:           CMD_NOP, CMD_BARRIER, CMD_IRQ_TEST: status_q &lt;= STAT_OK;
+  120:           CMD_MATMUL: status_q &lt;= dim_ok_for_matmul ? STAT_OK : STAT_BAD_DIM;
+  121:           CMD_LOAD_WEIGHT, CMD_LOAD_ACT, CMD_STORE: status_q &lt;= STAT_OK;
+  122:           default: status_q &lt;= STAT_BAD_OPCODE;
+  123:         endcase
+  124:       end else if (state_q == ST_WAIT_DMA &amp;&amp; dma_done) begin
+  1</pre>
+        </li><li>
+          <div class="step-head">Step 15: Read the RTL source (<code>rtl/scheduler/tpe_scheduler.sv</code>)</div>
+          <pre class="step-result">--- rtl/scheduler/tpe_scheduler.sv (lines 1-50 of 246) ---
+    1: // Instruction Scheduler: pops commands from the Command Processor&#x27;s FIFO
+    2: // and dispatches them to the DMA Engine or Matrix Compute Engine, per
+    3: // docs/architecture/tpe_architecture_spec.md section 3.2.
+    4: //
+    5: // V1 simplification (matches the roadmap&#x27;s own &quot;V2: improved scheduler&quot;
+    6: // item): this is a *sequential* dispatcher, not an out-of-order/overlapped
+    7: // arbiter -- one command executes f</pre>
+        </li><li>
+          <div class="step-head">Step 16: Searched the design spec for expected behavior (<code>MATMUL dimension constraints</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;MATMUL dimension constraints&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 17: Searched the design spec for expected behavior (<code>dim_n dim_k ROWS COLS</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;dim_n dim_k ROWS COLS&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 18: Searched the design spec for expected behavior (<code>matrix engine dimensions</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;matrix engine dimensions&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 19: Searched the design graph (<code>matrix_engine</code>)</div>
+          <pre class="step-result">- Instance:u_matrix_engine (id=instance:tpe_top.u_matrix_engine, module=None)
+- Module:matrix_engine_ctrl__pi1 (id=module:matrix_engine_ctrl__pi1, module=None)
+- Module:matrix_engine__R10_C10_M100 (id=module:matrix_engine__R10_C10_M100, module=None)</pre>
+        </li></ol>
+    </details>
+      
+        <div class="kv"><span class="k">Answer-key check</span><span class="v"><span class="badge badge-good">Correct</span>
+        <span class="muted"> expected bug #5 — rtl/scheduler/tpe_scheduler.sv:[84]</span></span></div>
+      
+        <div class="kv"><span class="k">Rerun</span><span class="v">
+          <span class="badge badge-good">PASS</span>
+          <span class="muted">agent-fix/top-matmul_full_width_test-eeb6e7ce</span></span></div>
+      <div class="kv"><span class="k">Tokens</span><span class="v muted">12,945 (~$0.0443)</span></div>
+      
+        <details class="patch">
+          <summary>Proposed patch</summary>
+          <pre class="diff">--- a/rtl/scheduler/tpe_scheduler.sv
++++ b/rtl/scheduler/tpe_scheduler.sv
+@@ -92,7 +92,7 @@
+   logic [1:0] router_sel_q;
+   assign router_sel = router_sel_q;
+ 
+-  wire dim_ok_for_matmul = (cmd_q.dim_k &lt;= TILE_DIM_WIDTH&#x27;(ROWS)) &amp;&amp; (cmd_q.dim_n &lt; TILE_DIM_WIDTH&#x27;(COLS));
++  wire dim_ok_for_matmul = (cmd_q.dim_k &lt;= TILE_DIM_WIDTH&#x27;(ROWS)) &amp;&amp; (cmd_q.dim_n &lt;= TILE_DIM_WIDTH&#x27;(COLS));
+ 
+   always_ff @(posedge clk or negedge rst_n) begin
+     if (!rst_n) begin
+</pre>
+        </details>
+    </article>
+</div>
+</div></body></html>

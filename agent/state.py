@@ -18,6 +18,7 @@ class Failure(BaseModel):
     message: str = ""
     signals: list[str] = Field(default_factory=list)
     raw_excerpt: str = ""
+    seed: int | None = None
 
 
 class EvidenceItem(BaseModel):
@@ -28,7 +29,27 @@ class EvidenceItem(BaseModel):
     summary: str
 
 
+class HypothesisDraft(BaseModel):
+    """What the LLM produces directly. Deliberately NOT a raw unified diff —
+    `old_lines`/`new_lines` let the code construct a correctly-headered patch
+    mechanically (see `agent.tools.rtl_tools.build_unified_diff`), instead of
+    trusting model-authored hunk line-count math, which was a recurring
+    source of `git apply`-rejected "corrupt patch" failures."""
+
+    file: str
+    start_line: int = Field(description="1-indexed line where old_lines begins in the file")
+    old_lines: list[str] = Field(
+        description="The exact current source lines being replaced, verbatim as read via rtl_read_file "
+        "(no line-number prefixes, no added/removed whitespace)"
+    )
+    new_lines: list[str] = Field(description="The replacement lines")
+    explanation: str
+    self_reported_confidence: float = 0.5
+
+
 class Hypothesis(BaseModel):
+    """HypothesisDraft plus the mechanically-constructed patch_diff."""
+
     file: str
     line: int | None = None
     explanation: str

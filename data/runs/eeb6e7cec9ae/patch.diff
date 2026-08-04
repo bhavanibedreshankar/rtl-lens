@@ -1,0 +1,11 @@
+--- a/rtl/scheduler/tpe_scheduler.sv
++++ b/rtl/scheduler/tpe_scheduler.sv
+@@ -92,7 +92,7 @@
+   logic [1:0] router_sel_q;
+   assign router_sel = router_sel_q;
+ 
+-  wire dim_ok_for_matmul = (cmd_q.dim_k <= TILE_DIM_WIDTH'(ROWS)) && (cmd_q.dim_n < TILE_DIM_WIDTH'(COLS));
++  wire dim_ok_for_matmul = (cmd_q.dim_k <= TILE_DIM_WIDTH'(ROWS)) && (cmd_q.dim_n <= TILE_DIM_WIDTH'(COLS));
+ 
+   always_ff @(posedge clk or negedge rst_n) begin
+     if (!rst_n) begin

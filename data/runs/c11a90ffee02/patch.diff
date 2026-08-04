@@ -1,0 +1,11 @@
+--- a/rtl/matrix_engine/pe.sv
++++ b/rtl/matrix_engine/pe.sv
+@@ -74,7 +74,7 @@
+       valid_out <= valid_in;
+       // Sticky within this pass: once set (by this PE or a north
+       // neighbor), stays set as the partial sum continues south.
+-      ovf_out   <= ovf_in || this_add_overflows;
++      ovf_out   <= ovf_in || this_add_overflows;
+     end
+   end
+ 

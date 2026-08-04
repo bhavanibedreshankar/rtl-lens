@@ -39,8 +39,10 @@ class SimResult(BaseModel):
     stdout_tail: str = ""
 
 
-def run_test(cfg: SimConfig, repo_path: Path, test_tag: str, timeout_s: int = 900) -> SimResult:
+def run_test(cfg: SimConfig, repo_path: Path, test_tag: str, seed: int | None = None, timeout_s: int = 900) -> SimResult:
     cmd = cfg.run_cmd_template.format(test=test_tag)
+    if seed is not None:
+        cmd += f" -seed {seed}"
     # Point WORK_DIR at the same root the original failure was ingested from, so
     # this rerun's status.json lands somewhere we know to look (see module docstring).
     env = {**os.environ, "WORK_DIR": str(cfg.work_dir.parent.parent)}
@@ -54,7 +56,7 @@ def run_test(cfg: SimConfig, repo_path: Path, test_tag: str, timeout_s: int = 90
         timeout=timeout_s,
         env=env,
     )
-    status = _read_status(cfg, test_tag)
+    status = _read_status(cfg, test_tag, seed)
     passed = status.get("state") == "PASS" if status else proc.returncode == 0
     result = SimResult(
         test=test_tag,
@@ -68,8 +70,11 @@ def run_test(cfg: SimConfig, repo_path: Path, test_tag: str, timeout_s: int = 90
     return result
 
 
-def _read_status(cfg: SimConfig, test_tag: str) -> dict | None:
-    status_path = cfg.work_dir.parent.parent / _DEFAULT_WORK_DIR_NAME / test_tag / cfg.status_file
+def _read_status(cfg: SimConfig, test_tag: str, seed: int | None = None) -> dict | None:
+    # A seeded rerun's output directory carries a `.seed<N>` suffix (run_sim's own
+    # convention), distinct from the unseeded tag used to invoke `-test`.
+    scope = f"{test_tag}.seed{seed}" if seed is not None else test_tag
+    status_path = cfg.work_dir.parent.parent / _DEFAULT_WORK_DIR_NAME / scope / cfg.status_file
     if not status_path.is_file():
         return None
     try:

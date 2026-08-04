@@ -54,12 +54,17 @@ def parse_bug_list(path: Path) -> list[BugEntry]:
         if len(cells) != 7 or not cells[0].isdigit():
             continue
         num, block, file_line, _symptom, _root_cause, caught_by, category = cells
-        file_line = file_line.strip("`")
-        if ":" in file_line:
-            file_part, lines_part = file_line.split(":", 1)
+        # The File:Line cell is usually a single `path:line[,line]` backtick span, but
+        # a few entries (e.g. bug #7) instead have `path` followed by a parenthetical
+        # description containing its own backticks — take only the first backtick
+        # span as the file/loc, ignoring anything after it.
+        backtick_match = re.match(r"`([^`]+)`", file_line)
+        first_span = backtick_match.group(1) if backtick_match else file_line.strip("`")
+        if ":" in first_span:
+            file_part, lines_part = first_span.split(":", 1)
             lines = [int(x) for x in re.findall(r"\d+", lines_part)]
         else:
-            file_part, lines = file_line, []
+            file_part, lines = first_span, []
         entries.append(
             BugEntry(
                 number=int(num), block=block, file=file_part.strip(),
@@ -103,7 +108,13 @@ def grade(run_dir: Path, bug_list_path: Path) -> GradeResult:
     bug = matches[0]
     file_match = _norm(agent_file) == _norm(bug.file)
     if bug.lines and agent_line:
-        line_match = any(abs(agent_line - l) <= 3 for l in bug.lines)
+        # bug_list.md's line numbers are frozen at injection time; the file has
+        # drifted by small amounts since (observed up to ~11 lines across the
+        # bugs graded so far) from unrelated commits. A tight tolerance would
+        # mark a byte-for-byte-correct fix "file_only" purely from that drift,
+        # so this is deliberately generous — file_match is still the primary,
+        # unambiguous signal; this only refines it.
+        line_match = any(abs(agent_line - l) <= 15 for l in bug.lines)
     else:
         line_match = file_match
 

@@ -1,0 +1,13 @@
+{
+  "total_tokens": 24724,
+  "per_node": {
+    "investigate": {
+      "prompt_tokens": 23455,
+      "completion_tokens": 1269,
+      "total_tokens": 24724,
+      "calls": 3
+    }
+  },
+  "budget": 150000,
+  "estimated_cost_usd": 0.0894
+}

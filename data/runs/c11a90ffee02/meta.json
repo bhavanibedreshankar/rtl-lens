@@ -1,0 +1,5 @@
+{
+  "run_id": "c11a90ffee02",
+  "config_path": "config/tpe.yaml",
+  "failure_dir": "/tmp/rtlens_seed4/WORK/matrix_engine.matmul_random_test.seed7/rtl_sim"
+}

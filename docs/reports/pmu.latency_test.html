@@ -1,0 +1,278 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pmu.latency_test — RTL-Lens</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #fcfcfb; --surface-1: #ffffff; --border: #e5e4e0;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #83817a;
+  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+  --accent: #2a78d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface-0: #121211; --surface-1: #1a1a19; --border: #2e2e2b;
+    --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #8f8d84;
+    --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #e66767;
+    --accent: #3987e5;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #121211; --surface-1: #1a1a19; --border: #2e2e2b;
+  --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #8f8d84;
+  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #e66767;
+  --accent: #3987e5;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface-0); color: var(--text-primary);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+h1 { font-size: 1.7rem; margin: 0 0 0.25rem; }
+h2 { font-size: 1.1rem; margin: 0 0 1rem; }
+.subtitle { color: var(--text-secondary); margin: 0 0 2rem; max-width: 60ch; }
+.stat-row { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.stat { min-width: 110px; }
+.stat-num { font-size: 1.8rem; font-weight: 700; }
+.stat-label { font-size: 0.8rem; color: var(--text-secondary); }
+.panel { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px;
+  padding: 1.25rem 1.5rem; margin-bottom: 2rem; }
+.grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+.card-head h3 { margin: 0; font-size: 1.05rem; }
+.badge { font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.55rem; border-radius: 999px;
+  border: 1px solid transparent; white-space: nowrap; }
+.badge-good { color: var(--good); border-color: var(--good); }
+.badge-warning { color: #8a5a00; border-color: var(--warning); background: color-mix(in srgb, var(--warning) 15%, transparent); }
+:root[data-theme="dark"] .badge-warning, @media (prefers-color-scheme: dark) { .badge-warning { color: var(--warning); } }
+.badge-critical { color: var(--critical); border-color: var(--critical); }
+.badge-serious { color: var(--serious); border-color: var(--serious); }
+.kv { display: flex; gap: 0.5rem; padding: 0.2rem 0; font-size: 0.9rem; align-items: center; flex-wrap: wrap; }
+.kv .k { color: var(--text-secondary); min-width: 130px; }
+.kv .v { color: var(--text-primary); }
+code { background: var(--surface-0); border: 1px solid var(--border); border-radius: 4px;
+  padding: 0.1rem 0.35rem; font-size: 0.85rem; }
+.muted { color: var(--text-muted); font-size: 0.85rem; }
+.explanation { font-size: 0.9rem; color: var(--text-secondary); margin: 0.5rem 0; }
+.conf-wrap { display: flex; align-items: center; gap: 0.5rem; width: 160px; }
+.conf-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.conf-fill { height: 100%; border-radius: 3px; }
+.conf-good { background: var(--good); }
+.conf-warning { background: var(--warning); }
+.conf-critical { background: var(--critical); }
+.conf-label { font-size: 0.78rem; color: var(--text-secondary); }
+details.patch, details.evidence { margin-top: 0.75rem; }
+details.patch summary, details.evidence summary { cursor: pointer; font-size: 0.85rem; color: var(--accent); }
+pre.diff { background: var(--surface-0); border: 1px solid var(--border); border-radius: 8px;
+  padding: 0.75rem 1rem; overflow-x: auto; font-size: 0.8rem; margin-top: 0.5rem; }
+.breadcrumb { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.kv-block { margin: 0.6rem 0; }
+.kv-block .k { color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.3rem; }
+pre.fail-sig { background: var(--surface-0); border: 1px solid var(--border); border-left: 3px solid var(--serious);
+  border-radius: 6px; padding: 0.6rem 0.85rem; font-size: 0.82rem; overflow-x: auto; white-space: pre-wrap; margin: 0; }
+ol.plan { margin: 0; padding-left: 1.25rem; font-size: 0.88rem; color: var(--text-secondary); }
+ol.plan li { margin-bottom: 0.15rem; }
+ol.plan code { font-size: 0.82rem; }
+ol.evidence-list { list-style: none; margin: 0.5rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+ol.evidence-list li { border-left: 2px solid var(--border); padding-left: 0.75rem; }
+.step-head { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.2rem; }
+pre.step-result { background: var(--surface-0); border: 1px solid var(--border); border-radius: 6px;
+  padding: 0.5rem 0.7rem; font-size: 0.78rem; overflow-x: auto; white-space: pre-wrap; margin: 0; max-height: 220px; overflow-y: auto; }
+footer { margin-top: 2.5rem; font-size: 0.8rem; color: var(--text-muted); }
+.back-link { display: inline-block; margin-bottom: 1.25rem; font-size: 0.85rem; color: var(--accent); text-decoration: none; }
+.back-link:hover { text-decoration: underline; }
+.actions-link { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--accent);
+  text-decoration: none; border: 1px solid var(--border); border-radius: 8px; padding: 0.45rem 0.8rem; }
+.actions-link:hover { border-color: var(--accent); }
+table.regtable { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+table.regtable th { text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--text-muted); border-bottom: 1px solid var(--border); padding: 0.5rem 0.6rem; }
+table.regtable td { padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+table.regtable a { color: var(--accent); text-decoration: none; font-weight: 500; }
+table.regtable a:hover { text-decoration: underline; }
+table.regtable .classname { color: var(--text-muted); font-size: 0.8rem; }
+</style>
+</head><body><div class="wrap">
+<h1>🔍 pmu.latency_test</h1>
+<p class="subtitle">Individual debug report — smoke regression.</p>
+
+<a class="back-link" href="../index.html">&larr; Back to regression report</a>
+<div class="grid">
+
+    <article class="card">
+      <header class="card-head">
+        <div>
+          <div class="breadcrumb">smoke regression</div>
+          <h3>pmu.latency_test</h3>
+        </div>
+        <span class="badge badge-good">Verified</span>
+      </header>
+      
+        <div class="kv-block">
+          <span class="k">Fail signature (UVMError)</span>
+          <pre class="fail-sig">UVMError: PMU_LATENCY: CMD_LATENCY_LAST=4, want 5 (see docs/verification/bug_li…</pre>
+        </div>
+      
+    <div class="kv-block">
+      <span class="k">Investigation plan</span>
+      <ol class="plan"><li>Searched the design spec for expected behavior (<code>PMU_LATENCY CMD_LATENCY</code>)</li><li>Searched the design spec for expected behavior (<code>latency_test</code>)</li><li>Searched the design graph (<code>CMD_LATENCY_LAST</code>)</li><li>Searched the design spec for expected behavior (<code>PMU performance monitoring latency</code>)</li><li>Searched the design spec for expected behavior (<code>command latency cycles measurement</code>)</li><li>Searched the design graph (<code>tpe_pmu</code>)</li><li>Inspected the module instance hierarchy (<code>tpe_pmu</code>)</li><li>Traced the signal's driver (<code>cmd_latency_last_q</code>)</li><li>Read the RTL source (<code>rtl/pmu/tpe_pmu.sv</code>)</li><li>Read the RTL source (<code>rtl/pmu/tpe_pmu.sv</code>)</li><li>Read the RTL source (<code>verif/cocotb_tb/pmu/test_pmu.py</code>)</li><li>Computed the fanin cone (upstream dependencies) (<code>latency_ctr_q</code>)</li><li>Traced the signal's driver (<code>dispatch_start</code>)</li><li>Traced the signal's driver (<code>cmd_done_valid</code>)</li><li>Read the RTL source (<code>rtl/pmu/tpe_pmu.sv</code>)</li><li>Searched the design spec for expected behavior (<code>dispatch latency window begins ends</code>)</li><li>Searched the design spec for expected behavior (<code>bug #7 latency</code>)</li><li>Searched the design spec for expected behavior (<code>CMD_LATENCY_LAST register</code>)</li><li>Searched the design spec for expected behavior (<code>tpe_pmu register map</code>)</li><li>Searched the design spec for expected behavior (<code>performance monitor unit</code>)</li><li>Searched the design spec for expected behavior (<code>latency measurement cycles</code>)</li></ol>
+    </div>
+      <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/pmu/tpe_pmu.sv:107</code></span></div>
+      <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="94% (high)">
+  <div class="conf-track"><div class="conf-fill conf-good" style="width:94%"></div></div>
+  <span class="conf-label">94%</span>
+</div></span></div>
+      <p class="explanation">tpe_pmu.sv&#x27;s per-command latency counter (latency_ctr_q) increments via a nonblocking assignment (line 104) each cycle dispatch_active_q is set, starting at 1 on dispatch_start. When cmd_done_valid fires on the same cycle as an ongoing dispatch_active_q increment, the capture &#x27;cmd_latency_last_q &lt;= latency_ctr_q&#x27; at line 114 reads the pre-clock (old) value of latency_ctr_q, since both assignments are nonblocking and evaluate right-hand sides before the clock edge. This means the completion cycle itself is never counted, undercounting the true latency by exactly 1 cycle. This is explicitly documented as bug #7 in a comment directly above the buggy line. The failing test confirms this off-by-one: CMD_LATENCY_LAST=4 measured vs. want=5. The fix is to capture latency_ctr_q + 1 instead of latency_ctr_q, which correctly accounts for the completion cycle.</p>
+      
+    <details class="evidence">
+      <summary>Retrieved evidence (21 steps)</summary>
+      <ol class="evidence-list"><li>
+          <div class="step-head">Step 1: Searched the design spec for expected behavior (<code>PMU_LATENCY CMD_LATENCY</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;PMU_LATENCY CMD_LATENCY&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 2: Searched the design spec for expected behavior (<code>latency_test</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;latency_test&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 3: Searched the design graph (<code>CMD_LATENCY_LAST</code>)</div>
+          <pre class="step-result">- Register:cmd_latency_last_q (id=register:tpe_pmu.cmd_latency_last_q, module=tpe_pmu)</pre>
+        </li><li>
+          <div class="step-head">Step 4: Searched the design spec for expected behavior (<code>PMU performance monitoring latency</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;PMU performance monitoring latency&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 5: Searched the design spec for expected behavior (<code>command latency cycles measurement</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;command latency cycles measurement&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 6: Searched the design graph (<code>tpe_pmu</code>)</div>
+          <pre class="step-result">- Module:tpe_pmu (id=module:tpe_pmu, module=None)</pre>
+        </li><li>
+          <div class="step-head">Step 7: Inspected the module instance hierarchy (<code>tpe_pmu</code>)</div>
+          <pre class="step-result">{&quot;module&quot;: {&quot;name&quot;: &quot;tpe_pmu&quot;, &quot;orig_name&quot;: &quot;tpe_pmu&quot;, &quot;level&quot;: 2, &quot;is_top&quot;: false, &quot;node_type&quot;: &quot;Module&quot;, &quot;id&quot;: &quot;module:tpe_pmu&quot;}, &quot;instances&quot;: []}</pre>
+        </li><li>
+          <div class="step-head">Step 8: Traced the signal's driver (<code>cmd_latency_last_q</code>)</div>
+          <pre class="step-result">- Assignment:assignment:tpe_pmu.assign_469 inside AlwaysBlock:always:tpe_pmu.always_437 [rtl/pmu/tpe_pmu.sv:70:3]
+- Assignment:assignment:tpe_pmu.assign_483 inside AlwaysBlock:always:tpe_pmu.always_437 [rtl/pmu/tpe_pmu.sv:70:3]</pre>
+        </li><li>
+          <div class="step-head">Step 9: Read the RTL source (<code>rtl/pmu/tpe_pmu.sv</code>)</div>
+          <pre class="step-result">--- rtl/pmu/tpe_pmu.sv (lines 50-90 of 218) ---
+   50:     input logic dispatch_start,    // a command&#x27;s dispatch-latency window begins this cycle
+   51:     input logic cmd_done_valid     // a command&#x27;s dispatch-latency window ends this cycle
+   52: );
+   53: 
+   54:   // ---- Register storage ---------------------------------------------------
+   55:   logic ctrl_enable_q;
+   56:   logic ctrl_reset_counters_q;
+   57: 
+   58:   logic [31:0] cycle_count_q;
+   59:   logic [31:0] mac_active_count_</pre>
+        </li><li>
+          <div class="step-head">Step 10: Read the RTL source (<code>rtl/pmu/tpe_pmu.sv</code>)</div>
+          <pre class="step-result">--- rtl/pmu/tpe_pmu.sv (lines 90-150 of 218) ---
+   90:       // counter reset) shouldn&#x27;t erase, same rationale as a &quot;last value&quot;
+   91:       // register in any perf-counter bank.
+   92:     end else if (counting) begin
+   93:       cycle_count_q &lt;= cycle_count_q + 32&#x27;d1;
+   94:       if (mac_active) mac_active_count_q &lt;= mac_active_count_q + 32&#x27;d1;
+   95:       if (dma_wait) dma_wait_count_q &lt;= dma_wait_count_q + 32&#x27;d1;
+   96:       if (sched_stall) sched_stall_count_q &lt;= sched_stall_count_q +</pre>
+        </li><li>
+          <div class="step-head">Step 11: Read the RTL source (<code>verif/cocotb_tb/pmu/test_pmu.py</code>)</div>
+          <pre class="step-result">(denied) &#x27;verif/cocotb_tb/pmu/test_pmu.py&#x27; is outside rtl/ — only RTL source is readable</pre>
+        </li><li>
+          <div class="step-head">Step 12: Computed the fanin cone (upstream dependencies) (<code>latency_ctr_q</code>)</div>
+          <pre class="step-result">- Register:ctrl_reset_counters_q (distance=1)
+- Port:rst_n (distance=1)
+- Signal:counting (distance=1)
+- Port:dispatch_start (distance=1)
+- Register:dispatch_active_q (distance=1)
+- Signal:do_write (distance=2)
+- Port:s_awaddr (distance=2)
+- Port:s_wdata (distance=2)
+- Register:ctrl_enable_q (distance=2)
+- Port:cmd_done_valid (distance=2)
+- Port:s_awvalid (distance=3)
+- Port:s_wvalid (distance=3)
+... and 1 more (truncated, reduce max_depth)</pre>
+        </li><li>
+          <div class="step-head">Step 13: Traced the signal's driver (<code>dispatch_start</code>)</div>
+          <pre class="step-result">- Signal:sched_dispatch_start [rtl/top/tpe_top.sv:157:17]</pre>
+        </li><li>
+          <div class="step-head">Step 14: Traced the signal's driver (<code>cmd_done_valid</code>)</div>
+          <pre class="step-result">- Signal:sched_done_valid [rtl/top/tpe_top.sv:153:17]</pre>
+        </li><li>
+          <div class="step-head">Step 15: Read the RTL source (<code>rtl/pmu/tpe_pmu.sv</code>)</div>
+          <pre class="step-result">--- rtl/pmu/tpe_pmu.sv (lines 1-120 of 218) ---
+    1: // Performance Monitor Unit: free-running event counters exposed over
+    2: // AXI4-Lite as the `pmu` register block (docs/register_map/tpe_regs.yaml),
+    3: // per docs/architecture/tpe_architecture_spec.md section 3.6.
+    4: //
+    5: // Same flat-port, single-outstanding-transaction AXI4-Lite slave pattern as
+    6: // tpe_cmd_proc.sv (AWVALID+WVALID presented together, one transaction at a
+    7: // time) -- reused here rather than fa</pre>
+        </li><li>
+          <div class="step-head">Step 16: Searched the design spec for expected behavior (<code>dispatch latency window begins ends</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;dispatch latency window begins ends&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 17: Searched the design spec for expected behavior (<code>bug #7 latency</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;bug #7 latency&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 18: Searched the design spec for expected behavior (<code>CMD_LATENCY_LAST register</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;CMD_LATENCY_LAST register&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 19: Searched the design spec for expected behavior (<code>tpe_pmu register map</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;tpe_pmu register map&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 20: Searched the design spec for expected behavior (<code>performance monitor unit</code>)</div>
+          <pre class="step-result">### [docs/architecture/tpe_architecture_spec.md] 3.6 Performance Monitor Unit (`rtl/pmu/`)
+Free-running counters exposed via the `pmu` register block: cycle count,
+MAC-active cycles, DMA-wait cycles, scheduler-stall cycles, idle cycles, and
+last-command latency. Counters reset via `PMU_CTRL.RESET_COUNTERS` (level-
+sensitive -- counters stay pinned at 0 for as long as it&#x27;s held) and gated
+via `PMU_CTRL.ENABLE`. The event inputs (`mac_active`/`dma_wait`/
+`sched_stall`/`sched_idle`/`dispatch_start`</pre>
+        </li><li>
+          <div class="step-head">Step 21: Searched the design spec for expected behavior (<code>latency measurement cycles</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;latency measurement cycles&#x27;)</pre>
+        </li></ol>
+    </details>
+      
+        <div class="kv"><span class="k">Answer-key check</span><span class="v"><span class="badge badge-good">Correct</span>
+        <span class="muted"> expected bug #7 — rtl/pmu/tpe_pmu.sv:[]</span></span></div>
+      
+        <div class="kv"><span class="k">Rerun</span><span class="v">
+          <span class="badge badge-good">PASS</span>
+          <span class="muted">agent-fix/pmu-latency_test-9012cddb</span></span></div>
+      <div class="kv"><span class="k">Tokens</span><span class="v muted">23,878 (~$0.0908)</span></div>
+      
+        <details class="patch">
+          <summary>Proposed patch</summary>
+          <pre class="diff">--- a/rtl/pmu/tpe_pmu.sv
++++ b/rtl/pmu/tpe_pmu.sv
+@@ -104,16 +104,10 @@
+         latency_ctr_q &lt;= latency_ctr_q + 32&#x27;d1;
+       end
+ 
+-      if (cmd_done_valid) begin
+-        // BUG (#7, see docs/verification/bug_list.md): this cycle&#x27;s
+-        // increment above (dispatch_active_q branch) hasn&#x27;t landed in
+-        // latency_ctr_q yet -- nonblocking assignments both read the *old*
+-        // value, so capturing latency_ctr_q here misses the completion
+-        // cycle itself and undercounts by exactly 1. Should be
+-        // `latency_ctr_q + 32&#x27;d1`.
+-        cmd_latency_last_q &lt;= latency_ctr_q;
+-        dispatch_active_q  &lt;= 1&#x27;b0;
+-      end
++      if (cmd_done_valid) begin
++        cmd_latency_last_q &lt;= latency_ctr_q + 32&#x27;d1;
++        dispatch_active_q  &lt;= 1&#x27;b0;
++      end
+     end
+   end
+ 
+</pre>
+        </details>
+    </article>
+</div>
+</div></body></html>

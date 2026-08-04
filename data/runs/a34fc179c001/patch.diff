@@ -1,0 +1,34 @@
+--- a/rtl/dma/tpe_dma.sv
++++ b/rtl/dma/tpe_dma.sv
+@@ -236,18 +236,18 @@
+   // ---- SRAM-side port ----------------------------------------------------
+   assign sram_addr  = sram_addr_q;
+   assign sram_strb  = {SRAM_STRB_WIDTH{1'b1}};
+-  always_comb begin
+-    sram_en    = 1'b0;
+-    sram_we    = 1'b0;
+-    sram_wdata = '0;
+-    if (state_q == ST_RD_DATA && m_rvalid && m_rready) begin
+-      sram_en    = 1'b1;
+-      sram_we    = 1'b1;
+-      sram_wdata = m_rdata;
+-    end else if (state_q == ST_WR_SRAM_RD) begin
+-      sram_en = 1'b1;
+-      sram_we = 1'b0;
+-    end
+-  end
++  always_comb begin
++    sram_en    = 1'b0;
++    sram_we    = 1'b0;
++    sram_wdata = '0;
++    if (state_q == ST_RD_DATA && m_rvalid && m_rready) begin
++      sram_en    = 1'b1;
++      sram_we    = 1'b1;
++      sram_wdata = m_rdata;
++    end else if (state_q == ST_WR_SRAM_RD || (state_q == ST_WR_DATA && !(m_wvalid && m_wready) )) begin
++      sram_en = 1'b1;
++      sram_we = 1'b0;
++    end
++  end
+ 
+ endmodule

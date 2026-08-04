@@ -1,0 +1,14 @@
+{
+  "run_id": "68e2f7e2a943",
+  "test": "matrix_engine.matmul_overflow_test",
+  "agent_file": "rtl/matrix_engine/pe.sv",
+  "agent_line": 50,
+  "expected_bug_number": 3,
+  "expected_file": "rtl/matrix_engine/pe.sv",
+  "expected_lines": [
+    50
+  ],
+  "file_match": true,
+  "line_match": true,
+  "verdict": "correct"
+}
