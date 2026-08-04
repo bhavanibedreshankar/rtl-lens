@@ -1,9 +1,9 @@
-# RTLens
+# RTL-Lens
 
 **An AI RTL debug agent that uses graph RAG — not embeddings — as its primary tool for
 tracing simulation failures to their root cause.**
 
-RTLens debugs RTL simulation failures by querying a **deterministic graph
+RTL-Lens debugs RTL simulation failures by querying a **deterministic graph
 representation** of the design ([`RTLGraph`](https://github.com/bhavanibedreshankar/RTLGraph)) —
 signal drivers, fanin/fanout, clock/reset domains — instead of vector-embedding-based
 retrieval. Given a failing test's log directory, it traces the failure through the graph, cross-references

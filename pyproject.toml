@@ -1,7 +1,7 @@
 [project]
-name = "rtlens"
+name = "rtl-lens"
 version = "0.1.0"
-description = "RTLens — an AI RTL debug agent that uses graph RAG, not embeddings, as its primary tool for tracing simulation failures to their root cause."
+description = "RTL-Lens — an AI RTL debug agent that uses graph RAG, not embeddings, as its primary tool for tracing simulation failures to their root cause."
 requires-python = ">=3.11"
 readme = "README.md"
 license = { text = "MIT" }

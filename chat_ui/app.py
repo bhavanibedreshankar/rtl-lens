@@ -33,7 +33,7 @@ load_dotenv()
 RUNS_ROOT = _PROJECT_ROOT / "data" / "runs"
 MEMORY_STORE_PATH = _PROJECT_ROOT / "data" / "memory" / "store.sqlite"
 
-st.set_page_config(page_title="RTL Debug Agent", page_icon="🐛", layout="wide")
+st.set_page_config(page_title="RTL-Lens", page_icon="🔍", layout="wide")
 
 
 def _init_state() -> None:
@@ -117,7 +117,7 @@ def _run_graph(resume_value: dict | None = None) -> None:
 
 _init_state()
 
-st.title("🐛 RTL Debug Agent")
+st.title("🔍 RTL-Lens")
 st.caption("Graph-grounded RTL debugging — watch the investigation, evidence, and fix as they happen.")
 
 with st.sidebar:

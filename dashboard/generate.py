@@ -365,10 +365,10 @@ def render(runs: list[RunView], graph_eval_path: Path | None) -> str:
     return f"""<!doctype html>
 <html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RTL Debug Agent — Dashboard</title>
+<title>RTL-Lens — Dashboard</title>
 <style>{_CSS}</style>
 </head><body><div class="wrap">
-<h1>🐛 RTL Debug Agent</h1>
+<h1>🔍 RTL-Lens</h1>
 <p class="subtitle">Graph-grounded RTL debugging: each run below diagnosed a failing simulation
 test using only a deterministic design graph, the spec, and RTL source — never the project's
 answer key — then proposed a patch, waited for human approval, and reran the test to verify.</p>
