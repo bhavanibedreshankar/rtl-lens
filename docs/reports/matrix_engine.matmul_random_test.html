@@ -81,6 +81,17 @@ ol.evidence-list li { border-left: 2px solid var(--border); padding-left: 0.75re
 .step-head { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.2rem; }
 pre.step-result { background: var(--surface-0); border: 1px solid var(--border); border-radius: 6px;
   padding: 0.5rem 0.7rem; font-size: 0.78rem; overflow-x: auto; white-space: pre-wrap; margin: 0; max-height: 220px; overflow-y: auto; }
+.card h4 { margin: 1rem 0 0.5rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--text-muted); }
+details.attempt { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.6rem;
+  background: var(--surface-0); }
+details.attempt[open] { border-color: var(--accent); }
+.attempt-summary { cursor: pointer; padding: 0.6rem 0.85rem; font-size: 0.85rem; font-weight: 600;
+  display: flex; align-items: center; gap: 0.6rem; list-style: none; }
+.attempt-summary::-webkit-details-marker { display: none; }
+.attempt-summary::before { content: "▸"; color: var(--text-muted); font-weight: 400; }
+details.attempt[open] > .attempt-summary::before { content: "▾"; }
+.attempt-body { padding: 0 0.85rem 0.85rem; }
 footer { margin-top: 2.5rem; font-size: 0.8rem; color: var(--text-muted); }
 .back-link { display: inline-block; margin-bottom: 1.25rem; font-size: 0.85rem; color: var(--accent); text-decoration: none; }
 .back-link:hover { text-decoration: underline; }
@@ -118,18 +129,224 @@ table.regtable td:last-child code { display: block; overflow-x: auto; white-spac
           <span class="k">Fail signature (AssertionError)</span>
           <pre class="fail-sig">AssertionError: [random0] 10 value mismatches</pre>
         </div>
+      <h4>Attempts (3)</h4>
       
+    <details class="attempt">
+      <summary class="attempt-summary">Attempt 1 of 3
+        <span class="badge badge-warning">Sent back for more evidence</span>
+      </summary>
+      <div class="attempt-body">
+        
+    <div class="kv-block">
+      <span class="k">Investigation plan</span>
+      <ol class="plan"><li>Searched the design spec for expected behavior (<code>matrix multiplication matmul operation</code>)</li><li>Searched the design spec for expected behavior (<code>matrix_engine</code>)</li><li>Searched the design graph (<code>matrix_engine</code>)</li><li>Inspected the module instance hierarchy (<code>matrix_engine__R10_C10_M100</code>)</li><li>Searched the design spec for expected behavior (<code>PE processing element accumulator</code>)</li><li>Searched the design spec for expected behavior (<code>pe.sv accumulator saturating</code>)</li><li>Searched the design graph (<code>pe</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/pe.sv</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/pe.sv</code>)</li></ol>
+    </div>
+        <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/matrix_engine/pe.sv:63</code></span></div>
+        <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="73% (medium)">
+  <div class="conf-track"><div class="conf-fill conf-warning" style="width:73%"></div></div>
+  <span class="conf-label">73%</span>
+</div></span></div>
+        <p class="explanation">In rtl/matrix_engine/pe.sv, `product` is declared as `logic signed [ACCUM_WIDTH-1:0]` (32-bit) but is assigned the result of `$signed(a_in) * $signed(weight_reg)`, an 8x8-bit signed multiply that only produces a 16-bit result. Verilog computes the multiply at the width of its operands (effectively 16 bits here) and then zero/sign-extends that raw bit pattern into the 32-bit target based on the expression&#x27;s self-determined width rules, which for this multiply expression does not reliably sign-extend negative 16-bit products into the upper 16 bits of the 32-bit `product` register. This corrupts the sign of negative products before they&#x27;re summed into acc_in on line 44, causing incorrect accumulation results — exactly matching the observed mismatches where RTL values differ from golden values in sign/magnitude (e.g. rtl=0xffffffe5 vs golden=0x00000062, rtl=0x00000069 vs golden=0x00000081). The fix is to sign-extend each operand to the full ACCUM_WIDTH before multiplying, so the multiplication is performed and produced at the full 32-bit width with correct sign extension throughout.</p>
+        
+    <details class="evidence">
+      <summary>Retrieved evidence (9 steps)</summary>
+      <ol class="evidence-list"><li>
+          <div class="step-head">Step 1: Searched the design spec for expected behavior (<code>matrix multiplication matmul operation</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;matrix multiplication matmul operation&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 2: Searched the design spec for expected behavior (<code>matrix_engine</code>)</div>
+          <pre class="step-result">### [docs/architecture/tpe_architecture_spec.md] 3.5 Matrix Compute Engine (`rtl/matrix_engine/`)
+Weight-stationary systolic array, default `MAC_ARRAY_ROWS` x
+`MAC_ARRAY_COLS` = 16x16 = 256 MACs, computing `C = A x B + C` over tiles up
+to `MAX_TILE_DIM` in each of M/K/N. Internally: input buffers -&gt; MAC array
+(`rtl/matrix_engine/pe.sv` x N instances) -&gt; accumulator
+(`rtl/matrix_engine/accumulator.sv`, int32, saturating) -&gt; output buffer.
+
+### [docs/architecture/tpe_architecture_spec.md] 4. Inter</pre>
+        </li><li>
+          <div class="step-head">Step 3: Searched the design graph (<code>matrix_engine</code>)</div>
+          <pre class="step-result">- Instance:u_matrix_engine (id=instance:tpe_top.u_matrix_engine, module=None)
+- Module:matrix_engine_ctrl__pi1 (id=module:matrix_engine_ctrl__pi1, module=None)
+- Module:matrix_engine__R10_C10_M100 (id=module:matrix_engine__R10_C10_M100, module=None)</pre>
+        </li><li>
+          <div class="step-head">Step 4: Inspected the module instance hierarchy (<code>matrix_engine__R10_C10_M100</code>)</div>
+          <pre class="step-result">{&quot;module&quot;: {&quot;name&quot;: &quot;matrix_engine__R10_C10_M100&quot;, &quot;orig_name&quot;: &quot;matrix_engine&quot;, &quot;level&quot;: 2, &quot;is_top&quot;: false, &quot;node_type&quot;: &quot;Module&quot;, &quot;id&quot;: &quot;module:matrix_engine__R10_C10_M100&quot;}, &quot;instances&quot;: [{&quot;instance&quot;: {&quot;id&quot;: &quot;instance:matrix_engine__R10_C10_M100.u_weight_buf&quot;, &quot;name&quot;: &quot;u_weight_buf&quot;, &quot;parent_module&quot;: &quot;matrix_engine__R10_C10_M100&quot;, &quot;module_type&quot;: &quot;dp_ram__DB10_A4_S10&quot;, &quot;loc&quot;: &quot;rtl/matrix_engine/matrix_engine.sv:118:5&quot;, &quot;node_type&quot;: &quot;Instance&quot;}, &quot;child&quot;: {&quot;module&quot;: {&quot;name&quot;: &quot;dp_ram__DB10_A4_S1</pre>
+        </li><li>
+          <div class="step-head">Step 5: Searched the design spec for expected behavior (<code>PE processing element accumulator</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;PE processing element accumulator&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 6: Searched the design spec for expected behavior (<code>pe.sv accumulator saturating</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;pe.sv accumulator saturating&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 7: Searched the design graph (<code>pe</code>)</div>
+          <pre class="step-result">- Module:pe (id=module:pe, module=None)
+- Instance:g_rows[0].g_cols[0].u_pe (id=instance:mac_array__R10_C10_O8_A20.g_rows[0].g_cols[0].u_pe, module=None)
+- Instance:g_rows[0].g_cols[1].u_pe (id=instance:mac_array__R10_C10_O8_A20.g_rows[0].g_cols[1].u_pe, module=None)
+- Instance:g_rows[0].g_cols[2].u_pe (id=instance:mac_array__R10_C10_O8_A20.g_rows[0].g_cols[2].u_pe, module=None)
+- Instance:g_rows[0].g_cols[3].u_pe (id=instance:mac_array__R10_C10_O8_A20.g_rows[0].g_cols[3].u_pe, module=None)
+- In</pre>
+        </li><li>
+          <div class="step-head">Step 8: Read the RTL source (<code>rtl/matrix_engine/pe.sv</code>)</div>
+          <pre class="step-result">--- rtl/matrix_engine/pe.sv (lines 1-40 of 81) ---
+    1: // Systolic Processing Element (one MAC) -- the fundamental unit of
+    2: // rtl/matrix_engine/mac_array.sv. Weight-stationary: the weight is loaded
+    3: // once (weight_load) and held for the whole tile; activations stream east
+    4: // (a_in -&gt; a_out, one cycle of pipeline delay) and partial sums stream
+    5: // south (acc_in -&gt; acc_out, one cycle of pipeline delay), each PE adding
+    6: // its own a_in*weight contribution as the </pre>
+        </li><li>
+          <div class="step-head">Step 9: Read the RTL source (<code>rtl/matrix_engine/pe.sv</code>)</div>
+          <pre class="step-result">--- rtl/matrix_engine/pe.sv (lines 40-81 of 81) ---
+   40:   logic signed [ACCUM_WIDTH-1:0] sum;
+   41:   logic signed [ACCUM_WIDTH-1:0] sum_saturated;
+   42:   logic this_add_overflows;
+   43: 
+   44:   assign sum = acc_in + product;
+   45:   // Signed-add overflow: operands share a sign but the result doesn&#x27;t.
+   46:   assign this_add_overflows = (acc_in[ACCUM_WIDTH-1] == product[ACCUM_WIDTH-1]) &amp;&amp;
+   47:                                (sum[ACCUM_WIDTH-1] != acc_in[ACCUM_WIDTH-1]);
+   48:   //</pre>
+        </li></ol>
+    </details>
+        
+      </div>
+    </details>
+    <details class="attempt">
+      <summary class="attempt-summary">Attempt 2 of 3
+        <span class="badge badge-warning">Sent back for more evidence</span>
+      </summary>
+      <div class="attempt-body">
+        
+    <div class="kv-block">
+      <span class="k">Investigation plan</span>
+      <ol class="plan"><li>Searched the design spec for expected behavior (<code>matrix multiplication matmul operation</code>)</li><li>Searched the design spec for expected behavior (<code>matrix_engine</code>)</li><li>Searched the design graph (<code>matrix_engine</code>)</li><li>Inspected the module instance hierarchy (<code>matrix_engine__R10_C10_M100</code>)</li><li>Searched the design spec for expected behavior (<code>PE processing element accumulator</code>)</li><li>Searched the design spec for expected behavior (<code>pe.sv accumulator saturating</code>)</li><li>Searched the design graph (<code>pe</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/pe.sv</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/pe.sv</code>)</li><li>Read the RTL source (<code>verif/cocotb_tb/matrix_engine/test_matrix_engine.py</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/accumulator.sv</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/mac_array.sv</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/matrix_engine_ctrl.sv</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/matrix_engine_ctrl.sv</code>)</li><li>Searched the design graph (<code>matmul_overflow_test</code>)</li></ol>
+    </div>
+        <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/matrix_engine/pe.sv:63</code></span></div>
+        <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="61% (medium)">
+  <div class="conf-track"><div class="conf-fill conf-warning" style="width:61%"></div></div>
+  <span class="conf-label">61%</span>
+</div></span></div>
+        <p class="explanation">pe.sv line 63 computes the 8x8 signed product and assigns it directly to `product`, which is declared as a full ACCUM_WIDTH (32-bit) signed logic vector. In SystemVerilog, assigning a narrower signed expression to a wider signed target via a continuous assignment does NOT automatically sign-extend based on the narrower expression&#x27;s own width in all synthesis/simulation contexts consistently -- specifically here, the right-hand-side expression `$signed(a_in) * $signed(weight_reg)` is a 16-bit-wide signed value (product of two signed 8-bit operands), but because it&#x27;s used directly as an assignment RHS to a 32-bit target, the intermediate result&#x27;s width in the multiplication is determined by context rules that make this fragile/incorrect: negative 16-bit products end up zero-extended into the upper 16 bits of the 32-bit `product` register instead of sign-extended, turning small negative partial products into huge positive 32-bit numbers before they&#x27;re added to acc_in on line 44. This matches the observed failure signature exactly: some result cells are far too large/positive (e.g. rtl=0x00000069 vs golden=0x00000081 direction aside, and more tellingly rtl=0xffffffe5 vs golden=0x00000062 shows sign flips), consistent with corrupted sign extension of the multiply propagating through the systolic accumulation chain across K and rows. The minimal fix is to compute the product into an explicitly-sized 2*OPERAND_WIDTH-bit signed intermediate and then explicitly sign-extend that intermediate up to ACCUM_WIDTH before it participates in the sum, removing any ambiguity/mistake in the width-extension of the signed multiply result.</p>
+        
+    <details class="evidence">
+      <summary>Retrieved evidence (15 steps)</summary>
+      <ol class="evidence-list"><li>
+          <div class="step-head">Step 1: Searched the design spec for expected behavior (<code>matrix multiplication matmul operation</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;matrix multiplication matmul operation&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 2: Searched the design spec for expected behavior (<code>matrix_engine</code>)</div>
+          <pre class="step-result">### [docs/architecture/tpe_architecture_spec.md] 3.5 Matrix Compute Engine (`rtl/matrix_engine/`)
+Weight-stationary systolic array, default `MAC_ARRAY_ROWS` x
+`MAC_ARRAY_COLS` = 16x16 = 256 MACs, computing `C = A x B + C` over tiles up
+to `MAX_TILE_DIM` in each of M/K/N. Internally: input buffers -&gt; MAC array
+(`rtl/matrix_engine/pe.sv` x N instances) -&gt; accumulator
+(`rtl/matrix_engine/accumulator.sv`, int32, saturating) -&gt; output buffer.
+
+### [docs/architecture/tpe_architecture_spec.md] 4. Inter</pre>
+        </li><li>
+          <div class="step-head">Step 3: Searched the design graph (<code>matrix_engine</code>)</div>
+          <pre class="step-result">- Instance:u_matrix_engine (id=instance:tpe_top.u_matrix_engine, module=None)
+- Module:matrix_engine_ctrl__pi1 (id=module:matrix_engine_ctrl__pi1, module=None)
+- Module:matrix_engine__R10_C10_M100 (id=module:matrix_engine__R10_C10_M100, module=None)</pre>
+        </li><li>
+          <div class="step-head">Step 4: Inspected the module instance hierarchy (<code>matrix_engine__R10_C10_M100</code>)</div>
+          <pre class="step-result">{&quot;module&quot;: {&quot;name&quot;: &quot;matrix_engine__R10_C10_M100&quot;, &quot;orig_name&quot;: &quot;matrix_engine&quot;, &quot;level&quot;: 2, &quot;is_top&quot;: false, &quot;node_type&quot;: &quot;Module&quot;, &quot;id&quot;: &quot;module:matrix_engine__R10_C10_M100&quot;}, &quot;instances&quot;: [{&quot;instance&quot;: {&quot;id&quot;: &quot;instance:matrix_engine__R10_C10_M100.u_weight_buf&quot;, &quot;name&quot;: &quot;u_weight_buf&quot;, &quot;parent_module&quot;: &quot;matrix_engine__R10_C10_M100&quot;, &quot;module_type&quot;: &quot;dp_ram__DB10_A4_S10&quot;, &quot;loc&quot;: &quot;rtl/matrix_engine/matrix_engine.sv:118:5&quot;, &quot;node_type&quot;: &quot;Instance&quot;}, &quot;child&quot;: {&quot;module&quot;: {&quot;name&quot;: &quot;dp_ram__DB10_A4_S1</pre>
+        </li><li>
+          <div class="step-head">Step 5: Searched the design spec for expected behavior (<code>PE processing element accumulator</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;PE processing element accumulator&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 6: Searched the design spec for expected behavior (<code>pe.sv accumulator saturating</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;pe.sv accumulator saturating&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 7: Searched the design graph (<code>pe</code>)</div>
+          <pre class="step-result">- Module:pe (id=module:pe, module=None)
+- Instance:g_rows[0].g_cols[0].u_pe (id=instance:mac_array__R10_C10_O8_A20.g_rows[0].g_cols[0].u_pe, module=None)
+- Instance:g_rows[0].g_cols[1].u_pe (id=instance:mac_array__R10_C10_O8_A20.g_rows[0].g_cols[1].u_pe, module=None)
+- Instance:g_rows[0].g_cols[2].u_pe (id=instance:mac_array__R10_C10_O8_A20.g_rows[0].g_cols[2].u_pe, module=None)
+- Instance:g_rows[0].g_cols[3].u_pe (id=instance:mac_array__R10_C10_O8_A20.g_rows[0].g_cols[3].u_pe, module=None)
+- In</pre>
+        </li><li>
+          <div class="step-head">Step 8: Read the RTL source (<code>rtl/matrix_engine/pe.sv</code>)</div>
+          <pre class="step-result">--- rtl/matrix_engine/pe.sv (lines 1-40 of 81) ---
+    1: // Systolic Processing Element (one MAC) -- the fundamental unit of
+    2: // rtl/matrix_engine/mac_array.sv. Weight-stationary: the weight is loaded
+    3: // once (weight_load) and held for the whole tile; activations stream east
+    4: // (a_in -&gt; a_out, one cycle of pipeline delay) and partial sums stream
+    5: // south (acc_in -&gt; acc_out, one cycle of pipeline delay), each PE adding
+    6: // its own a_in*weight contribution as the </pre>
+        </li><li>
+          <div class="step-head">Step 9: Read the RTL source (<code>rtl/matrix_engine/pe.sv</code>)</div>
+          <pre class="step-result">--- rtl/matrix_engine/pe.sv (lines 40-81 of 81) ---
+   40:   logic signed [ACCUM_WIDTH-1:0] sum;
+   41:   logic signed [ACCUM_WIDTH-1:0] sum_saturated;
+   42:   logic this_add_overflows;
+   43: 
+   44:   assign sum = acc_in + product;
+   45:   // Signed-add overflow: operands share a sign but the result doesn&#x27;t.
+   46:   assign this_add_overflows = (acc_in[ACCUM_WIDTH-1] == product[ACCUM_WIDTH-1]) &amp;&amp;
+   47:                                (sum[ACCUM_WIDTH-1] != acc_in[ACCUM_WIDTH-1]);
+   48:   //</pre>
+        </li><li>
+          <div class="step-head">Step 10: Read the RTL source (<code>verif/cocotb_tb/matrix_engine/test_matrix_engine.py</code>)</div>
+          <pre class="step-result">(denied) &#x27;verif/cocotb_tb/matrix_engine/test_matrix_engine.py&#x27; is outside rtl/ — only RTL source is readable</pre>
+        </li><li>
+          <div class="step-head">Step 11: Read the RTL source (<code>rtl/matrix_engine/accumulator.sv</code>)</div>
+          <pre class="step-result">(denied) &#x27;rtl/matrix_engine/accumulator.sv&#x27; does not exist</pre>
+        </li><li>
+          <div class="step-head">Step 12: Read the RTL source (<code>rtl/matrix_engine/mac_array.sv</code>)</div>
+          <pre class="step-result">--- rtl/matrix_engine/mac_array.sv (lines 1-100 of 105) ---
+    1: // ROWS x COLS weight-stationary systolic array of pe.sv instances.
+    2: // Pure fabric: activations enter each row&#x27;s west edge (a_in[r]) and flow
+    3: // east; partial sums enter each column&#x27;s north edge (acc_seed[c]) and flow
+    4: // south; weights load into row r when weight_load_row[r] is set, taking
+    5: // weight_bus[c] for column c. Getting the *timing* of a_in/acc_seed right
+    6: // (the systolic skew) is matrix</pre>
+        </li><li>
+          <div class="step-head">Step 13: Read the RTL source (<code>rtl/matrix_engine/matrix_engine_ctrl.sv</code>)</div>
+          <pre class="step-result">--- rtl/matrix_engine/matrix_engine_ctrl.sv (lines 1-150 of 326) ---
+    1: // Matrix Compute Engine control FSM: sequences weight loading, streams
+    2: // activations into mac_array with the systolic skew, and de-skews the
+    3: // array&#x27;s staggered per-column output back into whole result rows.
+    4: //
+    5: // ---------------------------------------------------------------------
+    6: // Systolic skew derivation (why row r / column c need their own delay)
+    7: // --------------------</pre>
+        </li><li>
+          <div class="step-head">Step 14: Read the RTL source (<code>rtl/matrix_engine/matrix_engine_ctrl.sv</code>)</div>
+          <pre class="step-result">--- rtl/matrix_engine/matrix_engine_ctrl.sv (lines 150-326 of 326) ---
+  150:   // (see mac_array.sv) -- that only works if row ROWS-1 gets valid pulses
+  151:   // like every other row, unused or not.
+  152:   for (genvar r = 0; r &lt; ROWS; r++) begin : g_a_skew
+  153:     if (r == 0) begin : g_r0
+  154:       assign arr_a_in[r]      = (r &lt;= k_q) ? abuf_rdata[r] : &#x27;0;
+  155:       assign arr_a_valid_in[r] = fetch_valid_q;
+  156:     end else begin : g_rN
+  157:       logic signed [OPERAND_WIDTH-1</pre>
+        </li><li>
+          <div class="step-head">Step 15: Searched the design graph (<code>matmul_overflow_test</code>)</div>
+          <pre class="step-result">(no matches)</pre>
+        </li></ol>
+    </details>
+        
+      </div>
+    </details>
+    <details class="attempt" open>
+      <summary class="attempt-summary">Attempt 3 of 3
+        <span class="badge badge-critical">Rejected</span>
+      </summary>
+      <div class="attempt-body">
+        
     <div class="kv-block">
       <span class="k">Investigation plan</span>
       <ol class="plan"><li>Searched the design spec for expected behavior (<code>matrix multiplication matmul operation</code>)</li><li>Searched the design spec for expected behavior (<code>matrix_engine</code>)</li><li>Searched the design graph (<code>matrix_engine</code>)</li><li>Inspected the module instance hierarchy (<code>matrix_engine__R10_C10_M100</code>)</li><li>Searched the design spec for expected behavior (<code>PE processing element accumulator</code>)</li><li>Searched the design spec for expected behavior (<code>pe.sv accumulator saturating</code>)</li><li>Searched the design graph (<code>pe</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/pe.sv</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/pe.sv</code>)</li><li>Read the RTL source (<code>verif/cocotb_tb/matrix_engine/test_matrix_engine.py</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/accumulator.sv</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/mac_array.sv</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/matrix_engine_ctrl.sv</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/matrix_engine_ctrl.sv</code>)</li><li>Searched the design graph (<code>matmul_overflow_test</code>)</li><li>Read the RTL source (<code>verif/cocotb_tb/matrix_engine</code>)</li><li>Searched the design spec for expected behavior (<code>matmul_overflow_test</code>)</li><li>Searched the design spec for expected behavior (<code>overflow saturation accumulator</code>)</li><li>Searched the design spec for expected behavior (<code>sign extension product multiplication</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/pe.sv</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/pe.sv</code>)</li><li>Traced the signal's driver (<code>sbuf_rdata</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/matrix_engine.sv</code>)</li></ol>
     </div>
-      <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/matrix_engine/pe.sv:77</code></span></div>
-      <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="43% (low)">
+        <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/matrix_engine/pe.sv:77</code></span></div>
+        <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="43% (low)">
   <div class="conf-track"><div class="conf-fill conf-critical" style="width:43%"></div></div>
   <span class="conf-label">43%</span>
 </div></span></div>
-      <p class="explanation">Insufficient evidence to pinpoint a definitive root cause. The observed mismatches (mix of positive and negative discrepancies, 10/24 elements wrong) do not clearly match a single-bit sign-extension bug or an obviously wrong overflow-sticky implementation from the source I actually read. I was unable to correlate the failing (row,col) coordinates with actual test input matrices, seed values, or golden data, and spec_search did not turn up an explicit contradicting spec for the sticky-overflow behavior in pe.sv. This is a placeholder no-op edit pending further evidence; confidence is set very low.</p>
-      
+        <p class="explanation">Insufficient evidence to pinpoint a definitive root cause. The observed mismatches (mix of positive and negative discrepancies, 10/24 elements wrong) do not clearly match a single-bit sign-extension bug or an obviously wrong overflow-sticky implementation from the source I actually read. I was unable to correlate the failing (row,col) coordinates with actual test input matrices, seed values, or golden data, and spec_search did not turn up an explicit contradicting spec for the sticky-overflow behavior in pe.sv. This is a placeholder no-op edit pending further evidence; confidence is set very low.</p>
+        
     <details class="evidence">
       <summary>Retrieved evidence (23 steps)</summary>
       <ol class="evidence-list"><li>
@@ -275,12 +492,7 @@ to `MAX_TILE_DIM` in each of M/K/N. Internally: input buffers -&gt; MAC array
     7: // verif/cocotb_tb/env/SyncPortAgent convention from M</pre>
         </li></ol>
     </details>
-      
-        <div class="kv"><span class="k">Answer-key check</span><span class="v"><span class="badge badge-critical">Incorrect</span>
-        <span class="muted"> expected bug #1 — rtl/matrix_engine/matrix_engine_ctrl.sv:[154, 166]</span></span></div>
-      
-      <div class="kv"><span class="k">Tokens</span><span class="v muted">31,994 (~$0.1309)</span></div>
-      
+        
         <details class="patch">
           <summary>Proposed patch</summary>
           <pre class="diff">--- a/rtl/matrix_engine/pe.sv
@@ -296,6 +508,13 @@ to `MAX_TILE_DIM` in each of M/K/N. Internally: input buffers -&gt; MAC array
  
 </pre>
         </details>
+      </div>
+    </details>
+      
+        <div class="kv"><span class="k">Answer-key check (final attempt)</span><span class="v"><span class="badge badge-critical">Incorrect</span>
+        <span class="muted"> expected bug #1 — rtl/matrix_engine/matrix_engine_ctrl.sv:[154, 166]</span></span></div>
+      
+      <div class="kv"><span class="k">Tokens (all attempts)</span><span class="v muted">31,994 (~$0.1309)</span></div>
     </article>
 </div>
 </div></body></html>

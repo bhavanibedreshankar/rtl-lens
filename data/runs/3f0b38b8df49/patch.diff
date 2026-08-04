@@ -1,0 +1,22 @@
+--- a/rtl/dma/tpe_dma.sv
++++ b/rtl/dma/tpe_dma.sv
+@@ -158,12 +158,13 @@
+       ST_RD_DATA:   if (m_rvalid && m_rready && m_rlast) begin
+         state_d = (beats_remaining_q == BeatsWidth'(1)) ? ST_DONE : ST_DECODE;
+       end
+-      ST_WR_ADDR:   if (m_awvalid && m_awready) state_d = ST_WR_SRAM_RD;
+-      ST_WR_SRAM_RD: state_d = ST_WR_DATA;
+-      ST_WR_DATA:   if (m_wvalid && m_wready) begin
+-        if (burst_beats_left_q == 8'd1) state_d = ST_WR_RESP;
+-        else state_d = ST_WR_SRAM_RD;
+-      end
++      ST_WR_ADDR:   if (m_awvalid && m_awready) state_d = ST_WR_SRAM_RD;
++      ST_WR_SRAM_RD: state_d = ST_WR_DATA;
++      ST_WR_DATA:   if (m_wvalid && m_wready) begin
++        if (burst_beats_left_q == 8'd1 && beats_remaining_q == BeatsWidth'(1)) state_d = ST_WR_RESP;
++        else if (burst_beats_left_q == 8'd1) state_d = ST_WR_ADDR;
++        else state_d = ST_WR_SRAM_RD;
++      end
+       ST_WR_RESP:   if (m_bvalid && m_bready) begin
+         state_d = (beats_remaining_q <= BeatsWidth'(1)) ? ST_DONE : ST_DECODE;
+       end

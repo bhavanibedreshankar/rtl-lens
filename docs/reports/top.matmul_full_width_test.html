@@ -81,6 +81,17 @@ ol.evidence-list li { border-left: 2px solid var(--border); padding-left: 0.75re
 .step-head { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.2rem; }
 pre.step-result { background: var(--surface-0); border: 1px solid var(--border); border-radius: 6px;
   padding: 0.5rem 0.7rem; font-size: 0.78rem; overflow-x: auto; white-space: pre-wrap; margin: 0; max-height: 220px; overflow-y: auto; }
+.card h4 { margin: 1rem 0 0.5rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--text-muted); }
+details.attempt { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.6rem;
+  background: var(--surface-0); }
+details.attempt[open] { border-color: var(--accent); }
+.attempt-summary { cursor: pointer; padding: 0.6rem 0.85rem; font-size: 0.85rem; font-weight: 600;
+  display: flex; align-items: center; gap: 0.6rem; list-style: none; }
+.attempt-summary::-webkit-details-marker { display: none; }
+.attempt-summary::before { content: "▸"; color: var(--text-muted); font-weight: 400; }
+details.attempt[open] > .attempt-summary::before { content: "▾"; }
+.attempt-body { padding: 0 0.85rem 0.85rem; }
 footer { margin-top: 2.5rem; font-size: 0.8rem; color: var(--text-muted); }
 .back-link { display: inline-block; margin-bottom: 1.25rem; font-size: 0.85rem; color: var(--accent); text-decoration: none; }
 .back-link:hover { text-decoration: underline; }
@@ -118,18 +129,99 @@ table.regtable td:last-child code { display: block; overflow-x: auto; white-spac
           <span class="k">Fail signature (UVMError)</span>
           <pre class="fail-sig">UVMError: MATMUL_FULL_WIDTH: MATMUL with dim_n==COLS(16) status=STAT_BAD_DIM, w…</pre>
         </div>
+      <h4>Attempts (2)</h4>
       
+    <details class="attempt">
+      <summary class="attempt-summary">Attempt 1 of 2
+        <span class="badge badge-warning">Sent back for more evidence</span>
+      </summary>
+      <div class="attempt-body">
+        
+    <div class="kv-block">
+      <span class="k">Investigation plan</span>
+      <ol class="plan"><li>Searched the design spec for expected behavior (<code>MATMUL command dim_n COLS validation</code>)</li><li>Searched the design spec for expected behavior (<code>STAT_BAD_DIM error condition</code>)</li><li>Searched the design graph (<code>STAT_BAD_DIM</code>)</li><li>Searched the design graph (<code>CMD_MATMUL</code>)</li><li>Searched the design graph (<code>scheduler</code>)</li><li>Searched the design graph (<code>cmd_proc</code>)</li><li>Inspected the module instance hierarchy (<code>tpe_scheduler__R10_C10</code>)</li><li>Searched the design graph (<code>dim_n</code>)</li><li>Searched the design graph (<code>BAD_DIM</code>)</li><li>Searched the design graph (<code>status</code>)</li><li>Searched the design graph (<code>decode</code>)</li><li>Traced the signal's driver (<code>status_q</code>)</li></ol>
+    </div>
+        <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/scheduler/tpe_scheduler.sv:1</code></span></div>
+        <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="37% (low)">
+  <div class="conf-track"><div class="conf-fill conf-critical" style="width:37%"></div></div>
+  <span class="conf-label">37%</span>
+</div></span></div>
+        <p class="explanation">Insufficient evidence gathered yet to pinpoint exact lines; need to read rtl/scheduler/tpe_scheduler.sv around line 97 (the always block driving status_q) to find the dim_n comparison against COLS that incorrectly rejects dim_n==16 (should be &lt;= COLS, not &lt; COLS). This is a placeholder pending actual source read.</p>
+        
+    <details class="evidence">
+      <summary>Retrieved evidence (12 steps)</summary>
+      <ol class="evidence-list"><li>
+          <div class="step-head">Step 1: Searched the design spec for expected behavior (<code>MATMUL command dim_n COLS validation</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;MATMUL command dim_n COLS validation&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 2: Searched the design spec for expected behavior (<code>STAT_BAD_DIM error condition</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;STAT_BAD_DIM error condition&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 3: Searched the design graph (<code>STAT_BAD_DIM</code>)</div>
+          <pre class="step-result">(no matches)</pre>
+        </li><li>
+          <div class="step-head">Step 4: Searched the design graph (<code>CMD_MATMUL</code>)</div>
+          <pre class="step-result">(no matches)</pre>
+        </li><li>
+          <div class="step-head">Step 5: Searched the design graph (<code>scheduler</code>)</div>
+          <pre class="step-result">- Instance:u_scheduler (id=instance:tpe_top.u_scheduler, module=None)
+- Module:tpe_scheduler__R10_C10 (id=module:tpe_scheduler__R10_C10, module=None)</pre>
+        </li><li>
+          <div class="step-head">Step 6: Searched the design graph (<code>cmd_proc</code>)</div>
+          <pre class="step-result">- Instance:u_cmd_proc (id=instance:tpe_top.u_cmd_proc, module=None)
+- Module:tpe_cmd_proc (id=module:tpe_cmd_proc, module=None)</pre>
+        </li><li>
+          <div class="step-head">Step 7: Inspected the module instance hierarchy (<code>tpe_scheduler__R10_C10</code>)</div>
+          <pre class="step-result">{&quot;module&quot;: {&quot;name&quot;: &quot;tpe_scheduler__R10_C10&quot;, &quot;orig_name&quot;: &quot;tpe_scheduler&quot;, &quot;level&quot;: 2, &quot;is_top&quot;: false, &quot;node_type&quot;: &quot;Module&quot;, &quot;id&quot;: &quot;module:tpe_scheduler__R10_C10&quot;}, &quot;instances&quot;: []}</pre>
+        </li><li>
+          <div class="step-head">Step 8: Searched the design graph (<code>dim_n</code>)</div>
+          <pre class="step-result">- Port:dim_n (id=port:matrix_engine__R10_C10_M100.dim_n, module=matrix_engine__R10_C10_M100)
+- Port:dim_n (id=port:matrix_engine_ctrl__pi1.dim_n, module=matrix_engine_ctrl__pi1)
+- Signal:me_dim_n (id=signal:tpe_top.me_dim_n, module=tpe_top)
+- Port:me_dim_n (id=port:tpe_scheduler__R10_C10.me_dim_n, module=tpe_scheduler__R10_C10)
+- Register:stg_dim_n_q (id=register:tpe_cmd_proc.stg_dim_n_q, module=tpe_cmd_proc)</pre>
+        </li><li>
+          <div class="step-head">Step 9: Searched the design graph (<code>BAD_DIM</code>)</div>
+          <pre class="step-result">(no matches)</pre>
+        </li><li>
+          <div class="step-head">Step 10: Searched the design graph (<code>status</code>)</div>
+          <pre class="step-result">- Signal:sched_done_status (id=signal:tpe_top.sched_done_status, module=tpe_top)
+- Port:sched_done_status (id=port:tpe_cmd_proc.sched_done_status, module=tpe_cmd_proc)
+- Port:sched_done_status (id=port:tpe_debug.sched_done_status, module=tpe_debug)
+- Port:sched_done_status (id=port:tpe_scheduler__R10_C10.sched_done_status, module=tpe_scheduler__R10_C10)
+- Register:status_q (id=register:tpe_scheduler__R10_C10.status_q, module=tpe_scheduler__R10_C10)
+- Signal:status_word (id=signal:tpe_cmd_proc.st</pre>
+        </li><li>
+          <div class="step-head">Step 11: Searched the design graph (<code>decode</code>)</div>
+          <pre class="step-result">(no matches)</pre>
+        </li><li>
+          <div class="step-head">Step 12: Traced the signal's driver (<code>status_q</code>)</div>
+          <pre class="step-result">- Assignment:assignment:tpe_scheduler__R10_C10.assign_680 inside AlwaysBlock:always:tpe_scheduler__R10_C10.always_666 [rtl/scheduler/tpe_scheduler.sv:97:3]
+- Assignment:assignment:tpe_scheduler__R10_C10.assign_682 inside AlwaysBlock:always:tpe_scheduler__R10_C10.always_666 [rtl/scheduler/tpe_scheduler.sv:97:3]
+- Assignment:assignment:tpe_scheduler__R10_C10.assign_684 inside AlwaysBlock:always:tpe_scheduler__R10_C10.always_666 [rtl/scheduler/tpe_scheduler.sv:97:3]
+- Assignment:assignment:tpe_sche</pre>
+        </li></ol>
+    </details>
+        
+      </div>
+    </details>
+    <details class="attempt" open>
+      <summary class="attempt-summary">Attempt 2 of 2
+        <span class="badge badge-good">Approved</span>
+      </summary>
+      <div class="attempt-body">
+        
     <div class="kv-block">
       <span class="k">Investigation plan</span>
       <ol class="plan"><li>Searched the design spec for expected behavior (<code>MATMUL command dim_n COLS validation</code>)</li><li>Searched the design spec for expected behavior (<code>STAT_BAD_DIM error condition</code>)</li><li>Searched the design graph (<code>STAT_BAD_DIM</code>)</li><li>Searched the design graph (<code>CMD_MATMUL</code>)</li><li>Searched the design graph (<code>scheduler</code>)</li><li>Searched the design graph (<code>cmd_proc</code>)</li><li>Inspected the module instance hierarchy (<code>tpe_scheduler__R10_C10</code>)</li><li>Searched the design graph (<code>dim_n</code>)</li><li>Searched the design graph (<code>BAD_DIM</code>)</li><li>Searched the design graph (<code>status</code>)</li><li>Searched the design graph (<code>decode</code>)</li><li>Traced the signal's driver (<code>status_q</code>)</li><li>Read the RTL source (<code>rtl/scheduler/tpe_scheduler.sv</code>)</li><li>Read the RTL source (<code>rtl/scheduler/tpe_scheduler.sv</code>)</li><li>Read the RTL source (<code>rtl/scheduler/tpe_scheduler.sv</code>)</li><li>Searched the design spec for expected behavior (<code>MATMUL dimension constraints</code>)</li><li>Searched the design spec for expected behavior (<code>dim_n dim_k ROWS COLS</code>)</li><li>Searched the design spec for expected behavior (<code>matrix engine dimensions</code>)</li><li>Searched the design graph (<code>matrix_engine</code>)</li></ol>
     </div>
-      <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/scheduler/tpe_scheduler.sv:95</code></span></div>
-      <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="91% (high)">
+        <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/scheduler/tpe_scheduler.sv:95</code></span></div>
+        <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="91% (high)">
   <div class="conf-track"><div class="conf-fill conf-good" style="width:91%"></div></div>
   <span class="conf-label">91%</span>
 </div></span></div>
-      <p class="explanation">The MATMUL dimension check in tpe_scheduler.sv used an inconsistent comparison for dim_n vs dim_k: dim_k is validated with &#x27;&lt;=&#x27; (allowing dim_k == ROWS) while dim_n was validated with strict &#x27;&lt;&#x27; (disallowing dim_n == COLS). The failing test issues a MATMUL with dim_n == COLS (16), which is a legal full-width matmul, but dim_n &lt; COLS evaluates false, causing dim_ok_for_matmul to be false and status_q to be set to STAT_BAD_DIM instead of STAT_OK. Changing the dim_n comparison to &#x27;&lt;=&#x27; makes the boundary condition consistent with dim_k and allows dim_n == COLS, matching the expected STAT_OK behavior for a full-width matmul.</p>
-      
+        <p class="explanation">The MATMUL dimension check in tpe_scheduler.sv used an inconsistent comparison for dim_n vs dim_k: dim_k is validated with &#x27;&lt;=&#x27; (allowing dim_k == ROWS) while dim_n was validated with strict &#x27;&lt;&#x27; (disallowing dim_n == COLS). The failing test issues a MATMUL with dim_n == COLS (16), which is a legal full-width matmul, but dim_n &lt; COLS evaluates false, causing dim_ok_for_matmul to be false and status_q to be set to STAT_BAD_DIM instead of STAT_OK. Changing the dim_n comparison to &#x27;&lt;=&#x27; makes the boundary condition consistent with dim_k and allows dim_n == COLS, matching the expected STAT_OK behavior for a full-width matmul.</p>
+        
     <details class="evidence">
       <summary>Retrieved evidence (19 steps)</summary>
       <ol class="evidence-list"><li>
@@ -239,15 +331,7 @@ table.regtable td:last-child code { display: block; overflow-x: auto; white-spac
 - Module:matrix_engine__R10_C10_M100 (id=module:matrix_engine__R10_C10_M100, module=None)</pre>
         </li></ol>
     </details>
-      
-        <div class="kv"><span class="k">Answer-key check</span><span class="v"><span class="badge badge-good">Correct</span>
-        <span class="muted"> expected bug #5 — rtl/scheduler/tpe_scheduler.sv:[84]</span></span></div>
-      
-        <div class="kv"><span class="k">Rerun</span><span class="v">
-          <span class="badge badge-good">PASS</span>
-          <span class="muted">agent-fix/top-matmul_full_width_test-eeb6e7ce</span></span></div>
-      <div class="kv"><span class="k">Tokens</span><span class="v muted">12,945 (~$0.0443)</span></div>
-      
+        
         <details class="patch">
           <summary>Proposed patch</summary>
           <pre class="diff">--- a/rtl/scheduler/tpe_scheduler.sv
@@ -263,6 +347,16 @@ table.regtable td:last-child code { display: block; overflow-x: auto; white-spac
      if (!rst_n) begin
 </pre>
         </details>
+      </div>
+    </details>
+      
+        <div class="kv"><span class="k">Answer-key check (final attempt)</span><span class="v"><span class="badge badge-good">Correct</span>
+        <span class="muted"> expected bug #5 — rtl/scheduler/tpe_scheduler.sv:[84]</span></span></div>
+      
+        <div class="kv"><span class="k">Rerun</span><span class="v">
+          <span class="badge badge-good">PASS</span>
+          <span class="muted">agent-fix/top-matmul_full_width_test-eeb6e7ce</span></span></div>
+      <div class="kv"><span class="k">Tokens (all attempts)</span><span class="v muted">12,945 (~$0.0443)</span></div>
     </article>
 </div>
 </div></body></html>

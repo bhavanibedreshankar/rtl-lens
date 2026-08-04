@@ -81,6 +81,17 @@ ol.evidence-list li { border-left: 2px solid var(--border); padding-left: 0.75re
 .step-head { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.2rem; }
 pre.step-result { background: var(--surface-0); border: 1px solid var(--border); border-radius: 6px;
   padding: 0.5rem 0.7rem; font-size: 0.78rem; overflow-x: auto; white-space: pre-wrap; margin: 0; max-height: 220px; overflow-y: auto; }
+.card h4 { margin: 1rem 0 0.5rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--text-muted); }
+details.attempt { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.6rem;
+  background: var(--surface-0); }
+details.attempt[open] { border-color: var(--accent); }
+.attempt-summary { cursor: pointer; padding: 0.6rem 0.85rem; font-size: 0.85rem; font-weight: 600;
+  display: flex; align-items: center; gap: 0.6rem; list-style: none; }
+.attempt-summary::-webkit-details-marker { display: none; }
+.attempt-summary::before { content: "▸"; color: var(--text-muted); font-weight: 400; }
+details.attempt[open] > .attempt-summary::before { content: "▾"; }
+.attempt-body { padding: 0 0.85rem 0.85rem; }
 footer { margin-top: 2.5rem; font-size: 0.8rem; color: var(--text-muted); }
 .back-link { display: inline-block; margin-bottom: 1.25rem; font-size: 0.85rem; color: var(--accent); text-decoration: none; }
 .back-link:hover { text-decoration: underline; }
@@ -118,18 +129,25 @@ table.regtable td:last-child code { display: block; overflow-x: auto; white-spac
           <span class="k">Fail signature (UVMFatalError)</span>
           <pre class="fail-sig">UVMFatalError: IRQ_INDEPENDENT_CLEAR: clearing CMD_ERROR alone should leave CMD…</pre>
         </div>
+      <h4>Attempt</h4>
       
+    <details class="attempt" open>
+      <summary class="attempt-summary">Attempt 1 of 1
+        <span class="badge badge-good">Approved</span>
+      </summary>
+      <div class="attempt-body">
+        
     <div class="kv-block">
       <span class="k">Investigation plan</span>
       <ol class="plan"><li>Searched the design spec for expected behavior (<code>IRQ_INDEPENDENT_CLEAR</code>)</li><li>Searched the design spec for expected behavior (<code>CMD_ERROR CMD_DONE</code>)</li><li>Searched the design graph (<code>IRQ_INDEPENDENT_CLEAR</code>)</li><li>Searched the design spec for expected behavior (<code>interrupt clear independent</code>)</li><li>Searched the design spec for expected behavior (<code>CMD_ERROR register</code>)</li><li>Searched the design graph (<code>CMD_ERROR</code>)</li><li>Read the RTL source (<code>verif/cocotb_tb/top/test_top.py</code>)</li><li>Searched the design graph (<code>irq</code>)</li><li>Searched the design graph (<code>CMD_DONE</code>)</li><li>Searched the design graph (<code>interrupt</code>)</li><li>Searched the design graph (<code>status</code>)</li><li>Searched the design graph (<code>clear</code>)</li><li>Searched the design spec for expected behavior (<code>status register</code>)</li><li>Read the RTL source (<code>rtl/command_processor/tpe_cmd_proc.sv</code>)</li><li>Traced the signal's driver (<code>irq_status_q</code>)</li><li>Read the RTL source (<code>rtl/command_processor/tpe_cmd_proc.sv</code>)</li><li>Searched the design spec for expected behavior (<code>CP_IRQ_STATUS</code>)</li><li>Searched the design spec for expected behavior (<code>register map IRQ</code>)</li><li>Searched the design graph (<code>CP_IRQ_STATUS_ADDR</code>)</li><li>Read the RTL source (<code>rtl/command_processor/tpe_cmd_proc.sv</code>)</li></ol>
     </div>
-      <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/command_processor/tpe_cmd_proc.sv:244</code></span></div>
-      <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="94% (high)">
+        <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/command_processor/tpe_cmd_proc.sv:244</code></span></div>
+        <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="94% (high)">
   <div class="conf-track"><div class="conf-fill conf-good" style="width:94%"></div></div>
   <span class="conf-label">94%</span>
 </div></span></div>
-      <p class="explanation">The IRQ status register (irq_status_q = {CMD_ERROR, CMD_DONE}) implements write-1-to-clear (W1C) semantics for the host. The clear mask on line 244 is built as `~{2{s_wdata[0]}}`, which replicates only bit 0 of the write data across both bits of the mask. This means the clear operation cannot target CMD_ERROR (bit 1) and CMD_DONE (bit 0) independently: writing s_wdata[0]=0 (e.g. 0x2, intending to clear only CMD_ERROR) clears nothing, and writing s_wdata[0]=1 clears both bits regardless of bit 1. This is why the test&#x27;s write of 0x2 (clear CMD_ERROR only) left irq_status_q unchanged at 0x3 instead of becoming 0x1 (CMD_DONE preserved, CMD_ERROR cleared). The fix is to use the full 2-bit write data as the per-bit clear mask: `irq_status_q &lt;= irq_status_q &amp; ~s_wdata[1:0];`, which allows each status bit to be cleared independently as the W1C comment above the block (lines 227-231) describes.</p>
-      
+        <p class="explanation">The IRQ status register (irq_status_q = {CMD_ERROR, CMD_DONE}) implements write-1-to-clear (W1C) semantics for the host. The clear mask on line 244 is built as `~{2{s_wdata[0]}}`, which replicates only bit 0 of the write data across both bits of the mask. This means the clear operation cannot target CMD_ERROR (bit 1) and CMD_DONE (bit 0) independently: writing s_wdata[0]=0 (e.g. 0x2, intending to clear only CMD_ERROR) clears nothing, and writing s_wdata[0]=1 clears both bits regardless of bit 1. This is why the test&#x27;s write of 0x2 (clear CMD_ERROR only) left irq_status_q unchanged at 0x3 instead of becoming 0x1 (CMD_DONE preserved, CMD_ERROR cleared). The fix is to use the full 2-bit write data as the per-bit clear mask: `irq_status_q &lt;= irq_status_q &amp; ~s_wdata[1:0];`, which allows each status bit to be cleared independently as the W1C comment above the block (lines 227-231) describes.</p>
+        
     <details class="evidence">
       <summary>Retrieved evidence (20 steps)</summary>
       <ol class="evidence-list"><li>
@@ -229,15 +247,7 @@ table.regtable td:last-child code { display: block; overflow-x: auto; white-spac
     7: // V1 AXI4-Lite simplification: this slave expects AWVAL</pre>
         </li></ol>
     </details>
-      
-        <div class="kv"><span class="k">Answer-key check</span><span class="v"><span class="badge badge-good">Correct</span>
-        <span class="muted"> expected bug #6 — rtl/command_processor/tpe_cmd_proc.sv:[242]</span></span></div>
-      
-        <div class="kv"><span class="k">Rerun</span><span class="v">
-          <span class="badge badge-good">PASS</span>
-          <span class="muted">agent-fix/top-irq_independent_clear_test-0fde221b</span></span></div>
-      <div class="kv"><span class="k">Tokens</span><span class="v muted">13,738 (~$0.0562)</span></div>
-      
+        
         <details class="patch">
           <summary>Proposed patch</summary>
           <pre class="diff">--- a/rtl/command_processor/tpe_cmd_proc.sv
@@ -253,6 +263,16 @@ table.regtable td:last-child code { display: block; overflow-x: auto; white-spac
        if (sched_done_valid) begin
 </pre>
         </details>
+      </div>
+    </details>
+      
+        <div class="kv"><span class="k">Answer-key check (final attempt)</span><span class="v"><span class="badge badge-good">Correct</span>
+        <span class="muted"> expected bug #6 — rtl/command_processor/tpe_cmd_proc.sv:[242]</span></span></div>
+      
+        <div class="kv"><span class="k">Rerun</span><span class="v">
+          <span class="badge badge-good">PASS</span>
+          <span class="muted">agent-fix/top-irq_independent_clear_test-0fde221b</span></span></div>
+      <div class="kv"><span class="k">Tokens (all attempts)</span><span class="v muted">13,738 (~$0.0562)</span></div>
     </article>
 </div>
 </div></body></html>

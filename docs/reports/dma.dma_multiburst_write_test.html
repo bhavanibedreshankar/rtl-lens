@@ -81,6 +81,17 @@ ol.evidence-list li { border-left: 2px solid var(--border); padding-left: 0.75re
 .step-head { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.2rem; }
 pre.step-result { background: var(--surface-0); border: 1px solid var(--border); border-radius: 6px;
   padding: 0.5rem 0.7rem; font-size: 0.78rem; overflow-x: auto; white-space: pre-wrap; margin: 0; max-height: 220px; overflow-y: auto; }
+.card h4 { margin: 1rem 0 0.5rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--text-muted); }
+details.attempt { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.6rem;
+  background: var(--surface-0); }
+details.attempt[open] { border-color: var(--accent); }
+.attempt-summary { cursor: pointer; padding: 0.6rem 0.85rem; font-size: 0.85rem; font-weight: 600;
+  display: flex; align-items: center; gap: 0.6rem; list-style: none; }
+.attempt-summary::-webkit-details-marker { display: none; }
+.attempt-summary::before { content: "▸"; color: var(--text-muted); font-weight: 400; }
+details.attempt[open] > .attempt-summary::before { content: "▾"; }
+.attempt-body { padding: 0 0.85rem 0.85rem; }
 footer { margin-top: 2.5rem; font-size: 0.8rem; color: var(--text-muted); }
 .back-link { display: inline-block; margin-bottom: 1.25rem; font-size: 0.85rem; color: var(--accent); text-decoration: none; }
 .back-link:hover { text-decoration: underline; }
@@ -111,27 +122,120 @@ table.regtable td:last-child code { display: block; overflow-x: auto; white-spac
           <div class="breadcrumb">smoke regression</div>
           <h3>dma.dma_multiburst_write_test</h3>
         </div>
-        <span class="badge badge-warning">Rejected</span>
+        <span class="badge badge-critical">Fix failed</span>
       </header>
       
         <div class="kv-block">
           <span class="k">Fail signature (MismatchError)</span>
           <pre class="fail-sig">MismatchError: 1 row mismatches</pre>
         </div>
+      <h4>Attempts (2)</h4>
       
+    <details class="attempt">
+      <summary class="attempt-summary">Attempt 1 of 2
+        <span class="badge badge-warning">Sent back for more evidence</span>
+      </summary>
+      <div class="attempt-body">
+        
     <div class="kv-block">
       <span class="k">Investigation plan</span>
-      <ol class="plan"><li>Searched the design graph (<code>dma</code>)</li><li>Searched the design spec for expected behavior (<code>dma multiburst write</code>)</li><li>Inspected the module instance hierarchy (<code>tpe_dma</code>)</li><li>Searched the design spec for expected behavior (<code>DMA state machine ST_WR_DATA ST_WR_SRAM_RD</code>)</li><li>Read the RTL source (<code>rtl</code>)</li><li>Searched the design graph (<code>ST_WR_DATA</code>)</li><li>Searched the design graph (<code>state</code>)</li><li>Traced the signal's driver (<code>state_d</code>)</li><li>Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</li><li>Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</li><li>Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</li><li>Searched the design graph (<code>sram_rdata</code>)</li><li>Traced the signal's driver (<code>sram_rdata</code>)</li><li>Read the RTL source (<code>rtl/top/tpe_top.sv</code>)</li><li>Read the RTL source (<code>rtl/top/tpe_top.sv</code>)</li><li>Searched the design graph (<code>dp_ram</code>)</li><li>Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</li><li>Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</li><li>Read the RTL source (<code>rtl/top/tpe_top.sv</code>)</li><li>Searched the design graph (<code>sram_rdata</code>)</li></ol>
+      <ol class="plan"><li>Searched the design graph (<code>dma</code>)</li><li>Searched the design spec for expected behavior (<code>dma multiburst write</code>)</li><li>Inspected the module instance hierarchy (<code>tpe_dma</code>)</li><li>Searched the design spec for expected behavior (<code>DMA state machine ST_WR_DATA ST_WR_SRAM_RD</code>)</li><li>Read the RTL source (<code>rtl</code>)</li><li>Searched the design graph (<code>ST_WR_DATA</code>)</li><li>Searched the design graph (<code>state</code>)</li><li>Traced the signal's driver (<code>state_d</code>)</li><li>Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</li></ol>
     </div>
-      <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/dma/tpe_dma.sv:239</code></span></div>
-      <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="61% (medium)">
-  <div class="conf-track"><div class="conf-fill conf-warning" style="width:61%"></div></div>
-  <span class="conf-label">61%</span>
+        <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/dma/tpe_dma.sv:150</code></span></div>
+        <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="43% (low)">
+  <div class="conf-track"><div class="conf-fill conf-critical" style="width:43%"></div></div>
+  <span class="conf-label">43%</span>
 </div></span></div>
-      <p class="explanation">In the ST_WR_DATA state, m_wdata is driven directly from the combinational sram_rdata port (line 231: assign m_wdata = sram_rdata;), relying on dp_ram&#x27;s registered read port to hold the beat fetched during the single-cycle ST_WR_SRAM_RD state stable until the write happens. However the SRAM read enable (sram_en) is only asserted while state_q==ST_WR_SRAM_RD, a single cycle, and is de-asserted once the FSM moves to ST_WR_DATA. If the write side (m_wready) stalls (not immediately ready), the FSM remains in ST_WR_DATA for more than one cycle while sram_en is low, and depending on the dp_ram model&#x27;s port behavero when not enabled, sram_rdata will not continue to hold correctly (e.g. may go to 0 due to enable-gated output register), producing an eventual all-zero payload as seen in mismatch row 16 (rtl=0x0...0, expected pattern). The minimal fix is to keep sram_en held (re-issuing the same-address read, harmless since sram_we stays 0) throughout ST_WR_DATA whenever the write beat hasn&#x27;t completed yet, ensuring the registered sram_rdata continues to reflect the same row&#x27;s data until the AXI write actually completes.</p>
-      
+        <p class="explanation">Insufficient evidence gathered yet — did not read the actual ST_WR_SRAM_RD/ST_WR_DATA state machine logic or the burst/last-beat counter logic before running out of investigation budget. The failure shows the last row (row 16, the last beat of a 17-row multiburst SRAM-&gt;DDR transfer) is written as all zeros instead of the expected data, while earlier rows apparently matched (only 1 mismatch of 17). This points to an off-by-one in the burst beat counter or a last-beat handling bug in the ST_WR_SRAM_RD/ST_WR_DATA loop (e.g., final SRAM read data not valid/latched before being pushed to the AXI write data on the last beat of the last burst), likely in the always block around tpe_dma.sv:150-210 that drives state_d and the write data mux. However, I have not verified this against actual source lines, so I cannot provide a grounded verbatim patch.</p>
+        
     <details class="evidence">
-      <summary>Retrieved evidence (20 steps)</summary>
+      <summary>Retrieved evidence (9 steps)</summary>
+      <ol class="evidence-list"><li>
+          <div class="step-head">Step 1: Searched the design graph (<code>dma</code>)</div>
+          <pre class="step-result">- Instance:u_dma (id=instance:tpe_top.u_dma, module=None)
+- Module:tpe_dma (id=module:tpe_dma, module=None)
+- Signal:dma_busy (id=signal:tpe_top.dma_busy, module=tpe_top)
+- Signal:dma_done (id=signal:tpe_top.dma_done, module=tpe_top)
+- Port:dma_wait (id=port:tpe_pmu.dma_wait, module=tpe_pmu)
+- Port:dma_busy (id=port:tpe_scheduler__R10_C10.dma_busy, module=tpe_scheduler__R10_C10)
+- Port:dma_done (id=port:tpe_scheduler__R10_C10.dma_done, module=tpe_scheduler__R10_C10)
+- Signal:dma_start (id=signal</pre>
+        </li><li>
+          <div class="step-head">Step 2: Searched the design spec for expected behavior (<code>dma multiburst write</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;dma multiburst write&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 3: Inspected the module instance hierarchy (<code>tpe_dma</code>)</div>
+          <pre class="step-result">{&quot;module&quot;: {&quot;name&quot;: &quot;tpe_dma&quot;, &quot;orig_name&quot;: &quot;tpe_dma&quot;, &quot;level&quot;: 2, &quot;is_top&quot;: false, &quot;node_type&quot;: &quot;Module&quot;, &quot;id&quot;: &quot;module:tpe_dma&quot;}, &quot;instances&quot;: []}</pre>
+        </li><li>
+          <div class="step-head">Step 4: Searched the design spec for expected behavior (<code>DMA state machine ST_WR_DATA ST_WR_SRAM_RD</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;DMA state machine ST_WR_DATA ST_WR_SRAM_RD&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 5: Read the RTL source (<code>rtl</code>)</div>
+          <pre class="step-result">(denied) &#x27;rtl&#x27; is outside rtl/ — only RTL source is readable</pre>
+        </li><li>
+          <div class="step-head">Step 6: Searched the design graph (<code>ST_WR_DATA</code>)</div>
+          <pre class="step-result">(no matches)</pre>
+        </li><li>
+          <div class="step-head">Step 7: Searched the design graph (<code>state</code>)</div>
+          <pre class="step-result">- Signal:state_d (id=signal:tpe_dma.state_d, module=tpe_dma)
+- Register:state_q (id=register:tpe_dma.state_q, module=tpe_dma)
+- Signal:state_d (id=signal:tpe_scheduler__R10_C10.state_d, module=tpe_scheduler__R10_C10)
+- Register:state_q (id=register:tpe_scheduler__R10_C10.state_q, module=tpe_scheduler__R10_C10)
+- Signal:state_d (id=signal:matrix_engine_ctrl__pi1.state_d, module=matrix_engine_ctrl__pi1)
+- Register:state_q (id=register:matrix_engine_ctrl__pi1.state_q, module=matrix_engine_ctrl__pi1</pre>
+        </li><li>
+          <div class="step-head">Step 8: Traced the signal's driver (<code>state_d</code>)</div>
+          <pre class="step-result">- Assignment:assignment:tpe_dma.assign_181 inside AlwaysBlock:always:tpe_dma.always_179 [rtl/dma/tpe_dma.sv:152:3]
+- Assignment:assignment:tpe_dma.assign_183 inside AlwaysBlock:always:tpe_dma.always_179 [rtl/dma/tpe_dma.sv:152:3]
+- Assignment:assignment:tpe_dma.assign_185 inside AlwaysBlock:always:tpe_dma.always_179 [rtl/dma/tpe_dma.sv:152:3]
+- Assignment:assignment:tpe_dma.assign_187 inside AlwaysBlock:always:tpe_dma.always_179 [rtl/dma/tpe_dma.sv:152:3]
+- Assignment:assignment:tpe_dma.assign_1</pre>
+        </li><li>
+          <div class="step-head">Step 9: Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</div>
+          <pre class="step-result">--- rtl/dma/tpe_dma.sv (lines 1-40 of 253) ---
+    1: // DMA Engine: descriptor-based mover between DDR (AXI4 master) and the
+    2: // Local SRAM scratchpad, per docs/architecture/tpe_architecture_spec.md
+    3: // section 3.3. V1 scope: single channel, one descriptor in flight at a
+    4: // time, INCR bursts capped at MAX_BURST_BEATS beats, transfer length must
+    5: // be a whole number of AXI_DATA_WIDTH-wide rows (16 bytes) -- this DMA
+    6: // moves whole SRAM rows, it does not do sub-ro</pre>
+        </li></ol>
+    </details>
+        
+        <details class="patch">
+          <summary>Proposed patch</summary>
+          <pre class="diff">--- a/rtl/dma/tpe_dma.sv
++++ b/rtl/dma/tpe_dma.sv
+@@ -147,6 +147,6 @@
+         default: ;
+       endcase
+     end
+   end
+ 
+   always_comb begin
+</pre>
+        </details>
+      </div>
+    </details>
+    <details class="attempt" open>
+      <summary class="attempt-summary">Attempt 2 of 2
+        <span class="badge badge-good">Approved</span>
+      </summary>
+      <div class="attempt-body">
+        
+    <div class="kv-block">
+      <span class="k">Investigation plan</span>
+      <ol class="plan"><li>Searched the design graph (<code>dma</code>)</li><li>Searched the design spec for expected behavior (<code>dma multiburst write</code>)</li><li>Inspected the module instance hierarchy (<code>tpe_dma</code>)</li><li>Searched the design spec for expected behavior (<code>DMA state machine ST_WR_DATA ST_WR_SRAM_RD</code>)</li><li>Read the RTL source (<code>rtl</code>)</li><li>Searched the design graph (<code>ST_WR_DATA</code>)</li><li>Searched the design graph (<code>state</code>)</li><li>Traced the signal's driver (<code>state_d</code>)</li><li>Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</li><li>Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</li><li>Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</li><li>Searched the design graph (<code>sram_rdata</code>)</li><li>Traced the signal's driver (<code>sram_rdata</code>)</li><li>Read the RTL source (<code>rtl/top/tpe_top.sv</code>)</li><li>Read the RTL source (<code>rtl/top/tpe_top.sv</code>)</li></ol>
+    </div>
+        <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/dma/tpe_dma.sv:161</code></span></div>
+        <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="55% (medium)">
+  <div class="conf-track"><div class="conf-fill conf-warning" style="width:55%"></div></div>
+  <span class="conf-label">55%</span>
+</div></span></div>
+        <p class="explanation">The DMA write-path state machine transitions from ST_WR_SRAM_RD directly to ST_WR_DATA, relying on the SRAM&#x27;s registered read-data output (sram_rdata) being valid one cycle after sram_en/sram_we are asserted in ST_WR_SRAM_RD. For the final beat of the final burst (row 16 of 17 in this multiburst test), the state machine reaches ST_WR_RESP based on burst_beats_left_q alone, without accounting for whether more full row transfers (spanning multiple AXI bursts, i.e. more descriptor beats_remaining_q) are still pending -- causing the last SRAM row&#x27;s read data never to be issued to the AXI write channel due to premature transition, leaving m_wdata driving stale/zero data (since sram_rdata reverts to its default post-read state) for the last row. Root cause: the last-beat-of-last-burst transition condition in ST_WR_DATA does not correctly gate on beats_remaining_q, causing the DMA to terminate the burst one beat early relative to the SRAM read pipeline for descriptors whose total beat count isn&#x27;t an exact multiple of MAX_BURST_BEATS, dropping the final row&#x27;s data (all zeros observed in scoreboard).</p>
+        
+    <details class="evidence">
+      <summary>Retrieved evidence (15 steps)</summary>
       <ol class="evidence-list"><li>
           <div class="step-head">Step 1: Searched the design graph (<code>dma</code>)</div>
           <pre class="step-result">- Instance:u_dma (id=instance:tpe_top.u_dma, module=None)
@@ -240,93 +344,45 @@ table.regtable td:last-child code { display: block; overflow-x: auto; white-spac
   289:   logic wbuf_a_en, wbuf_a_we;
   290:   logic [COLS-1:0] wbuf_a_strb;
   291:   logic [TILE_DIM</pre>
-        </li><li>
-          <div class="step-head">Step 16: Searched the design graph (<code>dp_ram</code>)</div>
-          <pre class="step-result">- Module:dp_ram__DB10_A4_S10 (id=module:dp_ram__DB10_A4_S10, module=None)
-- Module:dp_ram__DB100_A8_S10 (id=module:dp_ram__DB100_A8_S10, module=None)
-- Module:dp_ram__D20_DB100_A8_S4 (id=module:dp_ram__D20_DB100_A8_S4, module=None)
-- Module:dp_ram__D200_DB100_A8_S40 (id=module:dp_ram__D200_DB100_A8_S40, module=None)</pre>
-        </li><li>
-          <div class="step-head">Step 17: Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</div>
-          <pre class="step-result">--- rtl/dma/tpe_dma.sv (lines 1-50 of 253) ---
-    1: // DMA Engine: descriptor-based mover between DDR (AXI4 master) and the
-    2: // Local SRAM scratchpad, per docs/architecture/tpe_architecture_spec.md
-    3: // section 3.3. V1 scope: single channel, one descriptor in flight at a
-    4: // time, INCR bursts capped at MAX_BURST_BEATS beats, transfer length must
-    5: // be a whole number of AXI_DATA_WIDTH-wide rows (16 bytes) -- this DMA
-    6: // moves whole SRAM rows, it does not do sub-ro</pre>
-        </li><li>
-          <div class="step-head">Step 18: Read the RTL source (<code>rtl/dma/tpe_dma.sv</code>)</div>
-          <pre class="step-result">--- rtl/dma/tpe_dma.sv (lines 50-100 of 253) ---
-   50:     input  logic [    AXI_ID_WIDTH-1:0]   m_bid,
-   51:     output logic                          m_bready,
-   52: 
-   53:     // AXI4 master -- read address/data
-   54:     output logic                         m_arvalid,
-   55:     output logic [  AXI_ADDR_WIDTH-1:0]  m_araddr,
-   56:     output logic [                 7:0]  m_arlen,
-   57:     output logic [   AXI_ID_WIDTH-1:0]   m_arid,
-   58:     input  logic                         m_a</pre>
-        </li><li>
-          <div class="step-head">Step 19: Read the RTL source (<code>rtl/top/tpe_top.sv</code>)</div>
-          <pre class="step-result">--- rtl/top/tpe_top.sv (lines 1-50 of 404) ---
-    1: // TPE top level: Command Processor -&gt; Scheduler -&gt; {DMA Engine, Matrix
-    2: // Compute Engine}, per docs/architecture/tpe_architecture_spec.md. V1
-    3: // scope: matmul only (load weight, load activation, matmul, store), no
-    4: // activation unit (V2), no double buffering / overlap (V2&#x27;s &quot;improved
-    5: // scheduler&quot; -- see tpe_scheduler.sv&#x27;s header comment).
-    6: //
-    7: // V1 architecture note: matrix_engine&#x27;s four internal buf</pre>
-        </li><li>
-          <div class="step-head">Step 20: Searched the design graph (<code>sram_rdata</code>)</div>
-          <pre class="step-result">- Port:sram_rdata (id=port:tpe_dma.sram_rdata, module=tpe_dma)
-- Signal:dma_sram_rdata (id=signal:tpe_top.dma_sram_rdata, module=tpe_top)</pre>
         </li></ol>
     </details>
-      
-        <div class="kv"><span class="k">Answer-key check</span><span class="v"><span class="badge badge-warning">File match, line off</span>
-        <span class="muted"> expected bug #4 — rtl/dma/tpe_dma.sv:[161]</span></span></div>
-      
-      <div class="kv"><span class="k">Tokens</span><span class="v muted">23,688 (~$0.0884)</span></div>
-      
+        
         <details class="patch">
           <summary>Proposed patch</summary>
           <pre class="diff">--- a/rtl/dma/tpe_dma.sv
 +++ b/rtl/dma/tpe_dma.sv
-@@ -236,18 +236,18 @@
-   // ---- SRAM-side port ----------------------------------------------------
-   assign sram_addr  = sram_addr_q;
-   assign sram_strb  = {SRAM_STRB_WIDTH{1&#x27;b1}};
--  always_comb begin
--    sram_en    = 1&#x27;b0;
--    sram_we    = 1&#x27;b0;
--    sram_wdata = &#x27;0;
--    if (state_q == ST_RD_DATA &amp;&amp; m_rvalid &amp;&amp; m_rready) begin
--      sram_en    = 1&#x27;b1;
--      sram_we    = 1&#x27;b1;
--      sram_wdata = m_rdata;
--    end else if (state_q == ST_WR_SRAM_RD) begin
--      sram_en = 1&#x27;b1;
--      sram_we = 1&#x27;b0;
--    end
--  end
-+  always_comb begin
-+    sram_en    = 1&#x27;b0;
-+    sram_we    = 1&#x27;b0;
-+    sram_wdata = &#x27;0;
-+    if (state_q == ST_RD_DATA &amp;&amp; m_rvalid &amp;&amp; m_rready) begin
-+      sram_en    = 1&#x27;b1;
-+      sram_we    = 1&#x27;b1;
-+      sram_wdata = m_rdata;
-+    end else if (state_q == ST_WR_SRAM_RD || (state_q == ST_WR_DATA &amp;&amp; !(m_wvalid &amp;&amp; m_wready) )) begin
-+      sram_en = 1&#x27;b1;
-+      sram_we = 1&#x27;b0;
-+    end
-+  end
- 
- endmodule
+@@ -158,12 +158,13 @@
+       ST_RD_DATA:   if (m_rvalid &amp;&amp; m_rready &amp;&amp; m_rlast) begin
+         state_d = (beats_remaining_q == BeatsWidth&#x27;(1)) ? ST_DONE : ST_DECODE;
+       end
+-      ST_WR_ADDR:   if (m_awvalid &amp;&amp; m_awready) state_d = ST_WR_SRAM_RD;
+-      ST_WR_SRAM_RD: state_d = ST_WR_DATA;
+-      ST_WR_DATA:   if (m_wvalid &amp;&amp; m_wready) begin
+-        if (burst_beats_left_q == 8&#x27;d1) state_d = ST_WR_RESP;
+-        else state_d = ST_WR_SRAM_RD;
+-      end
++      ST_WR_ADDR:   if (m_awvalid &amp;&amp; m_awready) state_d = ST_WR_SRAM_RD;
++      ST_WR_SRAM_RD: state_d = ST_WR_DATA;
++      ST_WR_DATA:   if (m_wvalid &amp;&amp; m_wready) begin
++        if (burst_beats_left_q == 8&#x27;d1 &amp;&amp; beats_remaining_q == BeatsWidth&#x27;(1)) state_d = ST_WR_RESP;
++        else if (burst_beats_left_q == 8&#x27;d1) state_d = ST_WR_ADDR;
++        else state_d = ST_WR_SRAM_RD;
++      end
+       ST_WR_RESP:   if (m_bvalid &amp;&amp; m_bready) begin
+         state_d = (beats_remaining_q &lt;= BeatsWidth&#x27;(1)) ? ST_DONE : ST_DECODE;
+       end
 </pre>
         </details>
+      </div>
+    </details>
+      
+        <div class="kv"><span class="k">Answer-key check (final attempt)</span><span class="v"><span class="badge badge-good">Correct</span>
+        <span class="muted"> expected bug #4 — rtl/dma/tpe_dma.sv:[161]</span></span></div>
+      
+        <div class="kv"><span class="k">Rerun</span><span class="v">
+          <span class="badge badge-critical">FAIL</span>
+          <span class="muted">agent-fix/dma-dma_multiburst_write_test-3f0b38b8</span></span></div>
+      <div class="kv"><span class="k">Tokens (all attempts)</span><span class="v muted">17,662 (~$0.0699)</span></div>
     </article>
 </div>
 </div></body></html>

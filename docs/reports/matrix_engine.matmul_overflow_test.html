@@ -81,6 +81,17 @@ ol.evidence-list li { border-left: 2px solid var(--border); padding-left: 0.75re
 .step-head { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.2rem; }
 pre.step-result { background: var(--surface-0); border: 1px solid var(--border); border-radius: 6px;
   padding: 0.5rem 0.7rem; font-size: 0.78rem; overflow-x: auto; white-space: pre-wrap; margin: 0; max-height: 220px; overflow-y: auto; }
+.card h4 { margin: 1rem 0 0.5rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--text-muted); }
+details.attempt { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.6rem;
+  background: var(--surface-0); }
+details.attempt[open] { border-color: var(--accent); }
+.attempt-summary { cursor: pointer; padding: 0.6rem 0.85rem; font-size: 0.85rem; font-weight: 600;
+  display: flex; align-items: center; gap: 0.6rem; list-style: none; }
+.attempt-summary::-webkit-details-marker { display: none; }
+.attempt-summary::before { content: "▸"; color: var(--text-muted); font-weight: 400; }
+details.attempt[open] > .attempt-summary::before { content: "▾"; }
+.attempt-body { padding: 0 0.85rem 0.85rem; }
 footer { margin-top: 2.5rem; font-size: 0.8rem; color: var(--text-muted); }
 .back-link { display: inline-block; margin-bottom: 1.25rem; font-size: 0.85rem; color: var(--accent); text-decoration: none; }
 .back-link:hover { text-decoration: underline; }
@@ -118,18 +129,25 @@ table.regtable td:last-child code { display: block; overflow-x: auto; white-spac
           <span class="k">Fail signature (AssertionError)</span>
           <pre class="fail-sig">AssertionError: [overflow_neg] 1 value mismatches</pre>
         </div>
+      <h4>Attempt</h4>
       
+    <details class="attempt" open>
+      <summary class="attempt-summary">Attempt 1 of 1
+        <span class="badge badge-good">Approved</span>
+      </summary>
+      <div class="attempt-body">
+        
     <div class="kv-block">
       <span class="k">Investigation plan</span>
       <ol class="plan"><li>Searched the design spec for expected behavior (<code>overflow_neg accumulator</code>)</li><li>Searched the design graph (<code>overflow_neg</code>)</li><li>Searched the design spec for expected behavior (<code>matrix_engine overflow</code>)</li><li>Searched the design graph (<code>overflow</code>)</li><li>Searched the design graph (<code>matrix_engine</code>)</li><li>Searched the design spec for expected behavior (<code>matrix_engine</code>)</li><li>Inspected the module instance hierarchy (<code>matrix_engine__R10_C10_M100</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/matrix_engine.sv</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/matrix_engine.sv</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/matrix_engine.sv</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/mac_array.sv</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/mac_array.sv</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/pe.sv</code>)</li><li>Read the RTL source (<code>rtl/matrix_engine/pe.sv</code>)</li></ol>
     </div>
-      <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/matrix_engine/pe.sv:50</code></span></div>
-      <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="94% (high)">
+        <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/matrix_engine/pe.sv:50</code></span></div>
+        <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="94% (high)">
   <div class="conf-track"><div class="conf-fill conf-good" style="width:94%"></div></div>
   <span class="conf-label">94%</span>
 </div></span></div>
-      <p class="explanation">The accumulator saturation mux in pe.sv incorrectly returns the raw (wrapped) `sum` when a negative-operand overflow (underflow) occurs, instead of saturating to `AccumMin` (0x80000000). This is why the overflow_pos test passes (positive overflow correctly saturates to AccumMax) but overflow_neg fails: the RTL reports rtl=0x7fff05e8 (a wrapped/corrupted value) instead of the expected golden=0x80000000. The fix corrects the ternary so that when `this_add_overflows` is true and the shared operand sign is negative (acc_in[ACCUM_WIDTH-1]==1), the result saturates to AccumMin rather than passing through the overflowed `sum`.</p>
-      
+        <p class="explanation">The accumulator saturation mux in pe.sv incorrectly returns the raw (wrapped) `sum` when a negative-operand overflow (underflow) occurs, instead of saturating to `AccumMin` (0x80000000). This is why the overflow_pos test passes (positive overflow correctly saturates to AccumMax) but overflow_neg fails: the RTL reports rtl=0x7fff05e8 (a wrapped/corrupted value) instead of the expected golden=0x80000000. The fix corrects the ternary so that when `this_add_overflows` is true and the shared operand sign is negative (acc_in[ACCUM_WIDTH-1]==1), the result saturates to AccumMin rather than passing through the overflowed `sum`.</p>
+        
     <details class="evidence">
       <summary>Retrieved evidence (15 steps)</summary>
       <ol class="evidence-list"><li>
@@ -246,15 +264,7 @@ to `MAX_TILE_DIM` in each of M/K/N. Internally: input buffers -&gt; MAC array
    48:   //</pre>
         </li></ol>
     </details>
-      
-        <div class="kv"><span class="k">Answer-key check</span><span class="v"><span class="badge badge-good">Correct</span>
-        <span class="muted"> expected bug #3 — rtl/matrix_engine/pe.sv:[50]</span></span></div>
-      
-        <div class="kv"><span class="k">Rerun</span><span class="v">
-          <span class="badge badge-good">PASS</span>
-          <span class="muted">agent-fix/matrix_engine-matmul_overflow_test-68e2f7e2</span></span></div>
-      <div class="kv"><span class="k">Tokens</span><span class="v muted">24,724 (~$0.0894)</span></div>
-      
+        
         <details class="patch">
           <summary>Proposed patch</summary>
           <pre class="diff">--- a/rtl/matrix_engine/pe.sv
@@ -270,6 +280,16 @@ to `MAX_TILE_DIM` in each of M/K/N. Internally: input buffers -&gt; MAC array
      if (!rst_n) begin
 </pre>
         </details>
+      </div>
+    </details>
+      
+        <div class="kv"><span class="k">Answer-key check (final attempt)</span><span class="v"><span class="badge badge-good">Correct</span>
+        <span class="muted"> expected bug #3 — rtl/matrix_engine/pe.sv:[50]</span></span></div>
+      
+        <div class="kv"><span class="k">Rerun</span><span class="v">
+          <span class="badge badge-good">PASS</span>
+          <span class="muted">agent-fix/matrix_engine-matmul_overflow_test-68e2f7e2</span></span></div>
+      <div class="kv"><span class="k">Tokens (all attempts)</span><span class="v muted">24,724 (~$0.0894)</span></div>
     </article>
 </div>
 </div></body></html>

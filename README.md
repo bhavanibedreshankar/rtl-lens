@@ -27,13 +27,15 @@ for full investigation traces on every one of these:
 | `matrix_engine.matmul_overflow_test` | ✅ Fixed & verified | Asymmetric saturation clamp, exact line match |
 | `top.matmul_full_width_test` | ✅ Fixed & verified | Off-by-one boundary check, exact line match |
 | `pmu.latency_test` | ✅ Fixed & verified | NBA-ordering latency bug — RTL source had a comment giving away the answer, so this one doesn't demonstrate blind debugging as cleanly as the others |
-| `dma.dma_multiburst_write_test` | ⚠️ Not resolved | Landed on the right file across several attempts but never the right line; rejected rather than shipped |
+| `dma.dma_multiburst_write_test` | ⚠️ Not resolved | 2nd attempt hit the exact right file:line but the actual fix was wrong — verification-by-rerun caught it (a *worse* failure) even though it would've scored "correct" on line-match alone |
 | `matrix_engine.matmul_random_test` (bugs targeting `dim_k`/seed-chain off-by-ones) | ⚠️ Not resolved | Repeatedly diagnosed a *different*, real bug in the same block instead |
 
 **4 of 6 targeted bugs fixed and verified**, 2 honestly rejected rather than shipped
-incorrectly — including one case where a wrong patch would have scored "correct" by a naive
-line-proximity check but was actually incomplete and wouldn't compile (an undefined state
-value), caught only because the human-approval checkpoint exists.
+incorrectly — including a case (`dma_multiburst_write_test`, see its
+[full report](https://rtl-lens-bhavani89.vercel.app/reports/dma.dma_multiburst_write_test.html))
+where the agent's second attempt hit the *exact* right file and line, which would have scored
+"correct" by a naive line-proximity check alone, but the actual content was still wrong —
+caught only because the pipeline reran the real test rather than trusting the line match.
 
 ## How it works
 

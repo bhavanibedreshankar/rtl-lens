@@ -81,6 +81,17 @@ ol.evidence-list li { border-left: 2px solid var(--border); padding-left: 0.75re
 .step-head { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.2rem; }
 pre.step-result { background: var(--surface-0); border: 1px solid var(--border); border-radius: 6px;
   padding: 0.5rem 0.7rem; font-size: 0.78rem; overflow-x: auto; white-space: pre-wrap; margin: 0; max-height: 220px; overflow-y: auto; }
+.card h4 { margin: 1rem 0 0.5rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--text-muted); }
+details.attempt { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.6rem;
+  background: var(--surface-0); }
+details.attempt[open] { border-color: var(--accent); }
+.attempt-summary { cursor: pointer; padding: 0.6rem 0.85rem; font-size: 0.85rem; font-weight: 600;
+  display: flex; align-items: center; gap: 0.6rem; list-style: none; }
+.attempt-summary::-webkit-details-marker { display: none; }
+.attempt-summary::before { content: "▸"; color: var(--text-muted); font-weight: 400; }
+details.attempt[open] > .attempt-summary::before { content: "▾"; }
+.attempt-body { padding: 0 0.85rem 0.85rem; }
 footer { margin-top: 2.5rem; font-size: 0.8rem; color: var(--text-muted); }
 .back-link { display: inline-block; margin-bottom: 1.25rem; font-size: 0.85rem; color: var(--accent); text-decoration: none; }
 .back-link:hover { text-decoration: underline; }
@@ -118,18 +129,25 @@ table.regtable td:last-child code { display: block; overflow-x: auto; white-spac
           <span class="k">Fail signature (UVMError)</span>
           <pre class="fail-sig">UVMError: PMU_LATENCY: CMD_LATENCY_LAST=4, want 5 (see docs/verification/bug_li…</pre>
         </div>
+      <h4>Attempt</h4>
       
+    <details class="attempt" open>
+      <summary class="attempt-summary">Attempt 1 of 1
+        <span class="badge badge-good">Approved</span>
+      </summary>
+      <div class="attempt-body">
+        
     <div class="kv-block">
       <span class="k">Investigation plan</span>
       <ol class="plan"><li>Searched the design spec for expected behavior (<code>PMU_LATENCY CMD_LATENCY</code>)</li><li>Searched the design spec for expected behavior (<code>latency_test</code>)</li><li>Searched the design graph (<code>CMD_LATENCY_LAST</code>)</li><li>Searched the design spec for expected behavior (<code>PMU performance monitoring latency</code>)</li><li>Searched the design spec for expected behavior (<code>command latency cycles measurement</code>)</li><li>Searched the design graph (<code>tpe_pmu</code>)</li><li>Inspected the module instance hierarchy (<code>tpe_pmu</code>)</li><li>Traced the signal's driver (<code>cmd_latency_last_q</code>)</li><li>Read the RTL source (<code>rtl/pmu/tpe_pmu.sv</code>)</li><li>Read the RTL source (<code>rtl/pmu/tpe_pmu.sv</code>)</li><li>Read the RTL source (<code>verif/cocotb_tb/pmu/test_pmu.py</code>)</li><li>Computed the fanin cone (upstream dependencies) (<code>latency_ctr_q</code>)</li><li>Traced the signal's driver (<code>dispatch_start</code>)</li><li>Traced the signal's driver (<code>cmd_done_valid</code>)</li><li>Read the RTL source (<code>rtl/pmu/tpe_pmu.sv</code>)</li><li>Searched the design spec for expected behavior (<code>dispatch latency window begins ends</code>)</li><li>Searched the design spec for expected behavior (<code>bug #7 latency</code>)</li><li>Searched the design spec for expected behavior (<code>CMD_LATENCY_LAST register</code>)</li><li>Searched the design spec for expected behavior (<code>tpe_pmu register map</code>)</li><li>Searched the design spec for expected behavior (<code>performance monitor unit</code>)</li><li>Searched the design spec for expected behavior (<code>latency measurement cycles</code>)</li></ol>
     </div>
-      <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/pmu/tpe_pmu.sv:107</code></span></div>
-      <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="94% (high)">
+        <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/pmu/tpe_pmu.sv:107</code></span></div>
+        <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="94% (high)">
   <div class="conf-track"><div class="conf-fill conf-good" style="width:94%"></div></div>
   <span class="conf-label">94%</span>
 </div></span></div>
-      <p class="explanation">tpe_pmu.sv&#x27;s per-command latency counter (latency_ctr_q) increments via a nonblocking assignment (line 104) each cycle dispatch_active_q is set, starting at 1 on dispatch_start. When cmd_done_valid fires on the same cycle as an ongoing dispatch_active_q increment, the capture &#x27;cmd_latency_last_q &lt;= latency_ctr_q&#x27; at line 114 reads the pre-clock (old) value of latency_ctr_q, since both assignments are nonblocking and evaluate right-hand sides before the clock edge. This means the completion cycle itself is never counted, undercounting the true latency by exactly 1 cycle. This is explicitly documented as bug #7 in a comment directly above the buggy line. The failing test confirms this off-by-one: CMD_LATENCY_LAST=4 measured vs. want=5. The fix is to capture latency_ctr_q + 1 instead of latency_ctr_q, which correctly accounts for the completion cycle.</p>
-      
+        <p class="explanation">tpe_pmu.sv&#x27;s per-command latency counter (latency_ctr_q) increments via a nonblocking assignment (line 104) each cycle dispatch_active_q is set, starting at 1 on dispatch_start. When cmd_done_valid fires on the same cycle as an ongoing dispatch_active_q increment, the capture &#x27;cmd_latency_last_q &lt;= latency_ctr_q&#x27; at line 114 reads the pre-clock (old) value of latency_ctr_q, since both assignments are nonblocking and evaluate right-hand sides before the clock edge. This means the completion cycle itself is never counted, undercounting the true latency by exactly 1 cycle. This is explicitly documented as bug #7 in a comment directly above the buggy line. The failing test confirms this off-by-one: CMD_LATENCY_LAST=4 measured vs. want=5. The fix is to capture latency_ctr_q + 1 instead of latency_ctr_q, which correctly accounts for the completion cycle.</p>
+        
     <details class="evidence">
       <summary>Retrieved evidence (21 steps)</summary>
       <ol class="evidence-list"><li>
@@ -240,15 +258,7 @@ via `PMU_CTRL.ENABLE`. The event inputs (`mac_active`/`dma_wait`/
           <pre class="step-result">(no spec sections matched &#x27;latency measurement cycles&#x27;)</pre>
         </li></ol>
     </details>
-      
-        <div class="kv"><span class="k">Answer-key check</span><span class="v"><span class="badge badge-good">Correct</span>
-        <span class="muted"> expected bug #7 — rtl/pmu/tpe_pmu.sv:[]</span></span></div>
-      
-        <div class="kv"><span class="k">Rerun</span><span class="v">
-          <span class="badge badge-good">PASS</span>
-          <span class="muted">agent-fix/pmu-latency_test-9012cddb</span></span></div>
-      <div class="kv"><span class="k">Tokens</span><span class="v muted">23,878 (~$0.0908)</span></div>
-      
+        
         <details class="patch">
           <summary>Proposed patch</summary>
           <pre class="diff">--- a/rtl/pmu/tpe_pmu.sv
@@ -276,6 +286,16 @@ via `PMU_CTRL.ENABLE`. The event inputs (`mac_active`/`dma_wait`/
  
 </pre>
         </details>
+      </div>
+    </details>
+      
+        <div class="kv"><span class="k">Answer-key check (final attempt)</span><span class="v"><span class="badge badge-good">Correct</span>
+        <span class="muted"> expected bug #7 — rtl/pmu/tpe_pmu.sv:[]</span></span></div>
+      
+        <div class="kv"><span class="k">Rerun</span><span class="v">
+          <span class="badge badge-good">PASS</span>
+          <span class="muted">agent-fix/pmu-latency_test-9012cddb</span></span></div>
+      <div class="kv"><span class="k">Tokens (all attempts)</span><span class="v muted">23,878 (~$0.0908)</span></div>
     </article>
 </div>
 </div></body></html>

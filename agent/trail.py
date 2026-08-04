@@ -48,7 +48,9 @@ class Trail:
             payload = interrupts[0].value
             self.append(
                 "awaiting_approval",
-                **{k: v for k, v in payload.items() if k != "patch_diff"},
+                **payload,  # includes patch_diff — kept per-attempt so a rejected
+                # attempt's proposed fix stays visible even after a later attempt
+                # supersedes it in patch.diff on disk.
                 suite=suite,
                 fail_signature=failure.message if failure else None,
                 error_class=failure.error_class if failure else None,

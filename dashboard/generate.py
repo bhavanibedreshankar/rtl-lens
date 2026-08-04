@@ -20,6 +20,29 @@ from pathlib import Path
 
 
 @dataclass
+class AttemptView:
+    """One `awaiting_approval` checkpoint within a run — a run that needed
+    `more-evidence` N times has N+1 of these, each with its own hypothesis,
+    confidence, evidence trail, and proposed patch. `decision` is whichever of
+    approve/reject/more_evidence a human made about *this* attempt."""
+
+    index: int
+    file: str | None = None
+    line: int | None = None
+    explanation: str = ""
+    confidence_score: float | None = None
+    confidence_label: str | None = None
+    confidence_rationale: str = ""
+    evidence: list[dict] = None
+    patch_diff: str = ""
+    decision: str | None = None
+
+    def __post_init__(self):
+        if self.evidence is None:
+            self.evidence = []
+
+
+@dataclass
 class RunView:
     run_id: str
     suite: str = "unknown"
@@ -35,6 +58,7 @@ class RunView:
     confidence_rationale: str = ""
     evidence: list[dict] = None
     patch_diff: str = ""
+    attempts: list[AttemptView] = None
     branch: str | None = None
     rerun_passed: bool | None = None
     rerun_summary: str = ""
@@ -46,6 +70,8 @@ class RunView:
     def __post_init__(self):
         if self.evidence is None:
             self.evidence = []
+        if self.attempts is None:
+            self.attempts = []
 
 
 def _load_jsonl(path: Path) -> list[dict]:
@@ -71,15 +97,39 @@ def load_run(run_dir: Path) -> RunView:
             view.confidence_label = e.get("confidence_label")
             view.confidence_rationale = e.get("confidence_rationale", "")
             view.evidence = e.get("evidence", [])
+            view.patch_diff = e.get("patch_diff", "") or view.patch_diff
+            view.attempts.append(
+                AttemptView(
+                    index=len(view.attempts) + 1,
+                    file=e.get("file"),
+                    line=e.get("line"),
+                    explanation=e.get("explanation", ""),
+                    confidence_score=e.get("confidence_score"),
+                    confidence_label=e.get("confidence_label"),
+                    confidence_rationale=e.get("confidence_rationale", ""),
+                    evidence=e.get("evidence", []),
+                    patch_diff=e.get("patch_diff", ""),
+                )
+            )
+        elif e["event"] == "resumed" and view.attempts:
+            view.attempts[-1].decision = e.get("decision")
         if e["event"] == "run_finished":
             view.phase = e.get("phase", view.phase)
             view.branch = e.get("branch")
             view.rerun_passed = e.get("rerun_passed")
             view.rerun_summary = e.get("summary", "") or ""
+            if view.attempts and view.attempts[-1].decision is None:
+                view.attempts[-1].decision = "approve" if e.get("phase") in ("verified", "failed") else e.get("phase")
 
-    patch_path = run_dir / "patch.diff"
-    if patch_path.is_file():
-        view.patch_diff = patch_path.read_text()
+    # Fall back to the run's own patch.diff (from stage_patch, written on the LAST
+    # attempt) only for runs recorded before patch_diff started being stored per
+    # attempt in the trail itself.
+    if not view.patch_diff:
+        patch_path = run_dir / "patch.diff"
+        if patch_path.is_file():
+            view.patch_diff = patch_path.read_text()
+            if view.attempts and not view.attempts[-1].patch_diff:
+                view.attempts[-1].patch_diff = view.patch_diff
 
     grade_path = run_dir / "grade.json"
     if grade_path.is_file():
@@ -229,20 +279,45 @@ def _evidence_steps(evidence: list[dict]) -> str:
     </details>"""
 
 
+_DECISION_BADGE = {
+    "approve": ("good", "Approved"),
+    "reject": ("critical", "Rejected"),
+    "more_evidence": ("warning", "Sent back for more evidence"),
+}
+
+
+def _attempt_block(a: AttemptView, total: int, open_by_default: bool) -> str:
+    decision_role, decision_label = _DECISION_BADGE.get(a.decision, ("warning", a.decision or "pending"))
+    patch_html = ""
+    if a.patch_diff:
+        patch_html = f"""
+        <details class="patch">
+          <summary>Proposed patch</summary>
+          <pre class="diff">{html.escape(a.patch_diff)}</pre>
+        </details>"""
+
+    return f"""
+    <details class="attempt"{' open' if open_by_default else ''}>
+      <summary class="attempt-summary">Attempt {a.index} of {total}
+        <span class="badge badge-{decision_role}">{html.escape(decision_label)}</span>
+      </summary>
+      <div class="attempt-body">
+        {_investigation_plan(a.evidence)}
+        <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>{html.escape(a.file or '?')}:{a.line if a.line else '?'}</code></span></div>
+        <div class="kv"><span class="k">Confidence</span><span class="v">{_confidence_bar(a.confidence_score, a.confidence_label)}</span></div>
+        <p class="explanation">{html.escape(a.explanation)}</p>
+        {_evidence_steps(a.evidence)}
+        {patch_html}
+      </div>
+    </details>"""
+
+
 def _run_card(r: RunView) -> str:
     grade_html = ""
     if r.grade_verdict:
         grade_html = f"""
-        <div class="kv"><span class="k">Answer-key check</span><span class="v">{_badge(r.grade_verdict, _GRADE_STATUS)}
+        <div class="kv"><span class="k">Answer-key check (final attempt)</span><span class="v">{_badge(r.grade_verdict, _GRADE_STATUS)}
         {f'<span class="muted"> expected {html.escape(r.grade_expected)}</span>' if r.grade_expected else ''}</span></div>"""
-
-    patch_html = ""
-    if r.patch_diff:
-        patch_html = f"""
-        <details class="patch">
-          <summary>Proposed patch</summary>
-          <pre class="diff">{html.escape(r.patch_diff)}</pre>
-        </details>"""
 
     rerun_html = ""
     if r.rerun_passed is not None:
@@ -260,6 +335,13 @@ def _run_card(r: RunView) -> str:
           <pre class="fail-sig">{html.escape(r.fail_signature)}</pre>
         </div>"""
 
+    attempts = r.attempts or []
+    attempts_html = "".join(
+        _attempt_block(a, len(attempts), open_by_default=(i == len(attempts) - 1))
+        for i, a in enumerate(attempts)
+    )
+    attempts_heading = f"<h4>Attempts ({len(attempts)})</h4>" if len(attempts) > 1 else "<h4>Attempt</h4>"
+
     return f"""
     <article class="card">
       <header class="card-head">
@@ -270,15 +352,11 @@ def _run_card(r: RunView) -> str:
         {_badge(r.phase, _STATUS)}
       </header>
       {fail_sig_html}
-      {_investigation_plan(r.evidence)}
-      <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>{html.escape(r.file or '?')}:{r.line if r.line else '?'}</code></span></div>
-      <div class="kv"><span class="k">Confidence</span><span class="v">{_confidence_bar(r.confidence_score, r.confidence_label)}</span></div>
-      <p class="explanation">{html.escape(r.explanation)}</p>
-      {_evidence_steps(r.evidence)}
+      {attempts_heading}
+      {attempts_html}
       {grade_html}
       {rerun_html}
-      <div class="kv"><span class="k">Tokens</span><span class="v muted">{r.tokens:,} (~${r.cost_usd:.4f})</span></div>
-      {patch_html}
+      <div class="kv"><span class="k">Tokens (all attempts)</span><span class="v muted">{r.tokens:,} (~${r.cost_usd:.4f})</span></div>
     </article>"""
 
 
@@ -418,6 +496,17 @@ ol.evidence-list li { border-left: 2px solid var(--border); padding-left: 0.75re
 .step-head { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.2rem; }
 pre.step-result { background: var(--surface-0); border: 1px solid var(--border); border-radius: 6px;
   padding: 0.5rem 0.7rem; font-size: 0.78rem; overflow-x: auto; white-space: pre-wrap; margin: 0; max-height: 220px; overflow-y: auto; }
+.card h4 { margin: 1rem 0 0.5rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--text-muted); }
+details.attempt { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.6rem;
+  background: var(--surface-0); }
+details.attempt[open] { border-color: var(--accent); }
+.attempt-summary { cursor: pointer; padding: 0.6rem 0.85rem; font-size: 0.85rem; font-weight: 600;
+  display: flex; align-items: center; gap: 0.6rem; list-style: none; }
+.attempt-summary::-webkit-details-marker { display: none; }
+.attempt-summary::before { content: "▸"; color: var(--text-muted); font-weight: 400; }
+details.attempt[open] > .attempt-summary::before { content: "▾"; }
+.attempt-body { padding: 0 0.85rem 0.85rem; }
 footer { margin-top: 2.5rem; font-size: 0.8rem; color: var(--text-muted); }
 .back-link { display: inline-block; margin-bottom: 1.25rem; font-size: 0.85rem; color: var(--accent); text-decoration: none; }
 .back-link:hover { text-decoration: underline; }
