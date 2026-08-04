@@ -1,7 +1,7 @@
 [project]
-name = "rtl-debug-agent"
+name = "rtlens"
 version = "0.1.0"
-description = "An AI agent that debugs RTL simulation failures using a deterministic graph representation of the design instead of embeddings/RAG."
+description = "RTLens — an AI RTL debug agent that uses graph RAG, not embeddings, as its primary tool for tracing simulation failures to their root cause."
 requires-python = ">=3.11"
 readme = "README.md"
 license = { text = "MIT" }

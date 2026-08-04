@@ -1,9 +1,12 @@
-# RTL Debug Agent
+# RTLens
 
-An AI agent that debugs RTL simulation failures by querying a **deterministic graph
+**An AI RTL debug agent that uses graph RAG — not embeddings — as its primary tool for
+tracing simulation failures to their root cause.**
+
+RTLens debugs RTL simulation failures by querying a **deterministic graph
 representation** of the design ([`RTLGraph`](https://github.com/bhavanibedreshankar/RTLGraph)) —
-signal drivers, fanin/fanout, clock/reset domains — instead of relying on embeddings/RAG.
-Given a failing test's log directory, it traces the failure through the graph, cross-references
+signal drivers, fanin/fanout, clock/reset domains — instead of vector-embedding-based
+retrieval. Given a failing test's log directory, it traces the failure through the graph, cross-references
 the design spec, proposes a minimal RTL patch with a quantified confidence score, and — after a
 human approval checkpoint — applies it on a new git branch and reruns the test to verify the fix.
 
