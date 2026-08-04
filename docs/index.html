@@ -1,0 +1,273 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RTL Debug Agent — Dashboard</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #fcfcfb; --surface-1: #ffffff; --border: #e5e4e0;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #83817a;
+  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+  --accent: #2a78d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface-0: #121211; --surface-1: #1a1a19; --border: #2e2e2b;
+    --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #8f8d84;
+    --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #e66767;
+    --accent: #3987e5;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #121211; --surface-1: #1a1a19; --border: #2e2e2b;
+  --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #8f8d84;
+  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #e66767;
+  --accent: #3987e5;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface-0); color: var(--text-primary);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+h1 { font-size: 1.7rem; margin: 0 0 0.25rem; }
+h2 { font-size: 1.1rem; margin: 0 0 1rem; }
+.subtitle { color: var(--text-secondary); margin: 0 0 2rem; max-width: 60ch; }
+.stat-row { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.stat { min-width: 110px; }
+.stat-num { font-size: 1.8rem; font-weight: 700; }
+.stat-label { font-size: 0.8rem; color: var(--text-secondary); }
+.panel { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px;
+  padding: 1.25rem 1.5rem; margin-bottom: 2rem; }
+.grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+.card-head h3 { margin: 0; font-size: 1.05rem; }
+.badge { font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.55rem; border-radius: 999px;
+  border: 1px solid transparent; white-space: nowrap; }
+.badge-good { color: var(--good); border-color: var(--good); }
+.badge-warning { color: #8a5a00; border-color: var(--warning); background: color-mix(in srgb, var(--warning) 15%, transparent); }
+:root[data-theme="dark"] .badge-warning, @media (prefers-color-scheme: dark) { .badge-warning { color: var(--warning); } }
+.badge-critical { color: var(--critical); border-color: var(--critical); }
+.badge-serious { color: var(--serious); border-color: var(--serious); }
+.kv { display: flex; gap: 0.5rem; padding: 0.2rem 0; font-size: 0.9rem; align-items: center; flex-wrap: wrap; }
+.kv .k { color: var(--text-secondary); min-width: 130px; }
+.kv .v { color: var(--text-primary); }
+code { background: var(--surface-0); border: 1px solid var(--border); border-radius: 4px;
+  padding: 0.1rem 0.35rem; font-size: 0.85rem; }
+.muted { color: var(--text-muted); font-size: 0.85rem; }
+.explanation { font-size: 0.9rem; color: var(--text-secondary); margin: 0.5rem 0; }
+.conf-wrap { display: flex; align-items: center; gap: 0.5rem; width: 160px; }
+.conf-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.conf-fill { height: 100%; border-radius: 3px; }
+.conf-good { background: var(--good); }
+.conf-warning { background: var(--warning); }
+.conf-critical { background: var(--critical); }
+.conf-label { font-size: 0.78rem; color: var(--text-secondary); }
+details.patch, details.evidence { margin-top: 0.75rem; }
+details.patch summary, details.evidence summary { cursor: pointer; font-size: 0.85rem; color: var(--accent); }
+pre.diff { background: var(--surface-0); border: 1px solid var(--border); border-radius: 8px;
+  padding: 0.75rem 1rem; overflow-x: auto; font-size: 0.8rem; margin-top: 0.5rem; }
+.breadcrumb { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.kv-block { margin: 0.6rem 0; }
+.kv-block .k { color: var(--text-secondary); font-size: 0.85rem; display: block; margin-bottom: 0.3rem; }
+pre.fail-sig { background: var(--surface-0); border: 1px solid var(--border); border-left: 3px solid var(--serious);
+  border-radius: 6px; padding: 0.6rem 0.85rem; font-size: 0.82rem; overflow-x: auto; white-space: pre-wrap; margin: 0; }
+ol.plan { margin: 0; padding-left: 1.25rem; font-size: 0.88rem; color: var(--text-secondary); }
+ol.plan li { margin-bottom: 0.15rem; }
+ol.plan code { font-size: 0.82rem; }
+ol.evidence-list { list-style: none; margin: 0.5rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+ol.evidence-list li { border-left: 2px solid var(--border); padding-left: 0.75rem; }
+.step-head { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.2rem; }
+pre.step-result { background: var(--surface-0); border: 1px solid var(--border); border-radius: 6px;
+  padding: 0.5rem 0.7rem; font-size: 0.78rem; overflow-x: auto; white-space: pre-wrap; margin: 0; max-height: 220px; overflow-y: auto; }
+footer { margin-top: 2.5rem; font-size: 0.8rem; color: var(--text-muted); }
+</style>
+</head><body><div class="wrap">
+<h1>🐛 RTL Debug Agent</h1>
+<p class="subtitle">Graph-grounded RTL debugging: each run below diagnosed a failing simulation
+test using only a deterministic design graph, the spec, and RTL source — never the project's
+answer key — then proposed a patch, waited for human approval, and reran the test to verify.</p>
+
+<section class="panel">
+  <h2>Summary</h2>
+  <div class="stat-row">
+    <div class="stat"><div class="stat-num">1</div><div class="stat-label">Runs</div></div>
+    <div class="stat"><div class="stat-num">1</div><div class="stat-label">Fixes verified</div></div>
+    <div class="stat"><div class="stat-num">1/1</div><div class="stat-label">Matched answer key</div></div>
+    <div class="stat"><div class="stat-num">94%</div><div class="stat-label">Avg. confidence</div></div>
+    <div class="stat"><div class="stat-num">$0.056</div><div class="stat-label">Total LLM cost</div></div>
+  </div>
+</section>
+
+
+    <section class="panel">
+      <h2>Graph DB health</h2>
+      <div class="stat-row">
+        <div class="stat"><div class="stat-num">97.1</div><div class="stat-label">Overall / 100</div></div>
+        <div class="stat"><div class="stat-num">100.0</div><div class="stat-label">Structural</div></div>
+        <div class="stat"><div class="stat-num">100.0</div><div class="stat-label">Retrieval</div></div>
+        <div class="stat"><div class="stat-num">85.7</div><div class="stat-label">Coverage</div></div>
+      </div>
+      <p class="muted">3,379 nodes / 13,632 edges &middot;
+      0 orphan nodes &middot; 0 dangling edges</p>
+    </section>
+
+<h2>Runs</h2>
+<div class="grid">
+
+    <article class="card">
+      <header class="card-head">
+        <div>
+          <div class="breadcrumb">smoke regression</div>
+          <h3>top.irq_independent_clear_test</h3>
+        </div>
+        <span class="badge badge-good">Verified</span>
+      </header>
+      
+        <div class="kv-block">
+          <span class="k">Fail signature (UVMFatalError)</span>
+          <pre class="fail-sig">UVMFatalError: IRQ_INDEPENDENT_CLEAR: clearing CMD_ERROR alone should leave CMD…</pre>
+        </div>
+      
+    <div class="kv-block">
+      <span class="k">Investigation plan</span>
+      <ol class="plan"><li>Searched the design spec for expected behavior (<code>IRQ_INDEPENDENT_CLEAR</code>)</li><li>Searched the design spec for expected behavior (<code>CMD_ERROR CMD_DONE</code>)</li><li>Searched the design graph (<code>IRQ_INDEPENDENT_CLEAR</code>)</li><li>Searched the design spec for expected behavior (<code>interrupt clear independent</code>)</li><li>Searched the design spec for expected behavior (<code>CMD_ERROR register</code>)</li><li>Searched the design graph (<code>CMD_ERROR</code>)</li><li>Read the RTL source (<code>verif/cocotb_tb/top/test_top.py</code>)</li><li>Searched the design graph (<code>irq</code>)</li><li>Searched the design graph (<code>CMD_DONE</code>)</li><li>Searched the design graph (<code>interrupt</code>)</li><li>Searched the design graph (<code>status</code>)</li><li>Searched the design graph (<code>clear</code>)</li><li>Searched the design spec for expected behavior (<code>status register</code>)</li><li>Read the RTL source (<code>rtl/command_processor/tpe_cmd_proc.sv</code>)</li><li>Traced the signal's driver (<code>irq_status_q</code>)</li><li>Read the RTL source (<code>rtl/command_processor/tpe_cmd_proc.sv</code>)</li><li>Searched the design spec for expected behavior (<code>CP_IRQ_STATUS</code>)</li><li>Searched the design spec for expected behavior (<code>register map IRQ</code>)</li><li>Searched the design graph (<code>CP_IRQ_STATUS_ADDR</code>)</li><li>Read the RTL source (<code>rtl/command_processor/tpe_cmd_proc.sv</code>)</li></ol>
+    </div>
+      <div class="kv"><span class="k">Hypothesis / root cause</span><span class="v"><code>rtl/command_processor/tpe_cmd_proc.sv:244</code></span></div>
+      <div class="kv"><span class="k">Confidence</span><span class="v"><div class="conf-wrap" title="94% (high)">
+  <div class="conf-track"><div class="conf-fill conf-good" style="width:94%"></div></div>
+  <span class="conf-label">94%</span>
+</div></span></div>
+      <p class="explanation">The IRQ status register (irq_status_q = {CMD_ERROR, CMD_DONE}) implements write-1-to-clear (W1C) semantics for the host. The clear mask on line 244 is built as `~{2{s_wdata[0]}}`, which replicates only bit 0 of the write data across both bits of the mask. This means the clear operation cannot target CMD_ERROR (bit 1) and CMD_DONE (bit 0) independently: writing s_wdata[0]=0 (e.g. 0x2, intending to clear only CMD_ERROR) clears nothing, and writing s_wdata[0]=1 clears both bits regardless of bit 1. This is why the test&#x27;s write of 0x2 (clear CMD_ERROR only) left irq_status_q unchanged at 0x3 instead of becoming 0x1 (CMD_DONE preserved, CMD_ERROR cleared). The fix is to use the full 2-bit write data as the per-bit clear mask: `irq_status_q &lt;= irq_status_q &amp; ~s_wdata[1:0];`, which allows each status bit to be cleared independently as the W1C comment above the block (lines 227-231) describes.</p>
+      
+    <details class="evidence">
+      <summary>Retrieved evidence (20 steps)</summary>
+      <ol class="evidence-list"><li>
+          <div class="step-head">Step 1: Searched the design spec for expected behavior (<code>IRQ_INDEPENDENT_CLEAR</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;IRQ_INDEPENDENT_CLEAR&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 2: Searched the design spec for expected behavior (<code>CMD_ERROR CMD_DONE</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;CMD_ERROR CMD_DONE&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 3: Searched the design graph (<code>IRQ_INDEPENDENT_CLEAR</code>)</div>
+          <pre class="step-result">(no matches)</pre>
+        </li><li>
+          <div class="step-head">Step 4: Searched the design spec for expected behavior (<code>interrupt clear independent</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;interrupt clear independent&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 5: Searched the design spec for expected behavior (<code>CMD_ERROR register</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;CMD_ERROR register&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 6: Searched the design graph (<code>CMD_ERROR</code>)</div>
+          <pre class="step-result">(no matches)</pre>
+        </li><li>
+          <div class="step-head">Step 7: Read the RTL source (<code>verif/cocotb_tb/top/test_top.py</code>)</div>
+          <pre class="step-result">(denied) &#x27;verif/cocotb_tb/top/test_top.py&#x27; is outside rtl/ — only RTL source is readable</pre>
+        </li><li>
+          <div class="step-head">Step 8: Searched the design graph (<code>irq</code>)</div>
+          <pre class="step-result">- Port:irq (id=port:tpe_top.irq, module=tpe_top)
+- Port:irq (id=port:tpe_cmd_proc.irq, module=tpe_cmd_proc)
+- Register:irq_q (id=register:tpe_top.irq_q, module=tpe_top)
+- Register:irq_status_q (id=register:tpe_cmd_proc.irq_status_q, module=tpe_cmd_proc)
+- Register:irq_enable_q (id=register:tpe_cmd_proc.irq_enable_q, module=tpe_cmd_proc)</pre>
+        </li><li>
+          <div class="step-head">Step 9: Searched the design graph (<code>CMD_DONE</code>)</div>
+          <pre class="step-result">- Port:cmd_done_valid (id=port:tpe_pmu.cmd_done_valid, module=tpe_pmu)</pre>
+        </li><li>
+          <div class="step-head">Step 10: Searched the design graph (<code>interrupt</code>)</div>
+          <pre class="step-result">(no matches)</pre>
+        </li><li>
+          <div class="step-head">Step 11: Searched the design graph (<code>status</code>)</div>
+          <pre class="step-result">- Signal:sched_done_status (id=signal:tpe_top.sched_done_status, module=tpe_top)
+- Port:sched_done_status (id=port:tpe_cmd_proc.sched_done_status, module=tpe_cmd_proc)
+- Port:sched_done_status (id=port:tpe_debug.sched_done_status, module=tpe_debug)
+- Port:sched_done_status (id=port:tpe_scheduler__R10_C10.sched_done_status, module=tpe_scheduler__R10_C10)
+- Register:status_q (id=register:tpe_scheduler__R10_C10.status_q, module=tpe_scheduler__R10_C10)
+- Signal:status_word (id=signal:tpe_cmd_proc.st</pre>
+        </li><li>
+          <div class="step-head">Step 12: Searched the design graph (<code>clear</code>)</div>
+          <pre class="step-result">(no matches)</pre>
+        </li><li>
+          <div class="step-head">Step 13: Searched the design spec for expected behavior (<code>status register</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;status register&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 14: Read the RTL source (<code>rtl/command_processor/tpe_cmd_proc.sv</code>)</div>
+          <pre class="step-result">--- rtl/command_processor/tpe_cmd_proc.sv (lines 1-100 of 294) ---
+    1: // Command Processor: the accelerator&#x27;s &quot;front door&quot;. AXI4-Lite MMIO slave
+    2: // implementing the `cp` register block (docs/register_map/tpe_regs.yaml,
+    3: // generated into tpe_regs_pkg.sv), a command-staging register set, and the
+    4: // command FIFO the Scheduler drains. Per
+    5: // docs/architecture/tpe_architecture_spec.md section 3.1.
+    6: //
+    7: // V1 AXI4-Lite simplification: this slave expects AWVA</pre>
+        </li><li>
+          <div class="step-head">Step 15: Traced the signal's driver (<code>irq_status_q</code>)</div>
+          <pre class="step-result">- Assignment:assignment:tpe_cmd_proc.assign_410 inside AlwaysBlock:always:tpe_cmd_proc.always_404 [rtl/command_processor/tpe_cmd_proc.sv:232:3]
+- Assignment:assignment:tpe_cmd_proc.assign_412 inside AlwaysBlock:always:tpe_cmd_proc.always_404 [rtl/command_processor/tpe_cmd_proc.sv:232:3]
+- Assignment:assignment:tpe_cmd_proc.assign_414 inside AlwaysBlock:always:tpe_cmd_proc.always_404 [rtl/command_processor/tpe_cmd_proc.sv:232:3]
+- Assignment:assignment:tpe_cmd_proc.assign_416 inside AlwaysBlock:a</pre>
+        </li><li>
+          <div class="step-head">Step 16: Read the RTL source (<code>rtl/command_processor/tpe_cmd_proc.sv</code>)</div>
+          <pre class="step-result">--- rtl/command_processor/tpe_cmd_proc.sv (lines 220-280 of 294) ---
+  220:         CP_CMD_DIM_N_ADDR:  stg_dim_n_q  &lt;= s_wdata[CP_CMD_DIM_N_DIM_N_LSB+TILE_DIM_WIDTH-1:CP_CMD_DIM_N_DIM_N_LSB];
+  221:         CP_IRQ_ENABLE_ADDR: irq_enable_q &lt;= s_wdata[1:0];
+  222:         default: ;
+  223:       endcase
+  224:     end
+  225:   end
+  226: 
+  227:   // ---- IRQ status: set by scheduler completion, W1C by host --------------
+  228:   // A same-cycle completion always wins over a host clear (necessa</pre>
+        </li><li>
+          <div class="step-head">Step 17: Searched the design spec for expected behavior (<code>CP_IRQ_STATUS</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;CP_IRQ_STATUS&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 18: Searched the design spec for expected behavior (<code>register map IRQ</code>)</div>
+          <pre class="step-result">(no spec sections matched &#x27;register map IRQ&#x27;)</pre>
+        </li><li>
+          <div class="step-head">Step 19: Searched the design graph (<code>CP_IRQ_STATUS_ADDR</code>)</div>
+          <pre class="step-result">(no matches)</pre>
+        </li><li>
+          <div class="step-head">Step 20: Read the RTL source (<code>rtl/command_processor/tpe_cmd_proc.sv</code>)</div>
+          <pre class="step-result">--- rtl/command_processor/tpe_cmd_proc.sv (lines 1-30 of 294) ---
+    1: // Command Processor: the accelerator&#x27;s &quot;front door&quot;. AXI4-Lite MMIO slave
+    2: // implementing the `cp` register block (docs/register_map/tpe_regs.yaml,
+    3: // generated into tpe_regs_pkg.sv), a command-staging register set, and the
+    4: // command FIFO the Scheduler drains. Per
+    5: // docs/architecture/tpe_architecture_spec.md section 3.1.
+    6: //
+    7: // V1 AXI4-Lite simplification: this slave expects AWVAL</pre>
+        </li></ol>
+    </details>
+      
+        <div class="kv"><span class="k">Answer-key check</span><span class="v"><span class="badge badge-good">Correct</span>
+        <span class="muted"> expected bug #6 — rtl/command_processor/tpe_cmd_proc.sv:[242]</span></span></div>
+      
+        <div class="kv"><span class="k">Rerun</span><span class="v">
+          <span class="badge badge-good">PASS</span>
+          <span class="muted">agent-fix/top-irq_independent_clear_test-0fde221b</span></span></div>
+      <div class="kv"><span class="k">Tokens</span><span class="v muted">13,738 (~$0.0562)</span></div>
+      
+        <details class="patch">
+          <summary>Proposed patch</summary>
+          <pre class="diff">--- a/rtl/command_processor/tpe_cmd_proc.sv
++++ b/rtl/command_processor/tpe_cmd_proc.sv
+@@ -241,7 +241,7 @@
+       end
+ 
+       if (do_write &amp;&amp; (s_awaddr == CP_IRQ_STATUS_ADDR)) begin
+-        irq_status_q &lt;= irq_status_q &amp; ~{2{s_wdata[0]}};
++        irq_status_q &lt;= irq_status_q &amp; ~s_wdata[1:0];
+       end
+ 
+       if (sched_done_valid) begin
+</pre>
+        </details>
+    </article>
+</div>
+
+<footer>Generated by dashboard/generate.py. Diagnosis loop scoped away from
+docs/verification/bug_list.md by construction (see agent/tools/rtl_tools.py and
+spec_tools.py); grading against it happens only after a diagnosis is final.</footer>
+</div></body></html>

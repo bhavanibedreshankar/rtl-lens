@@ -1,0 +1,26 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Graph DB Health Report</title>
+<style>
+body { font-family: -apple-system, sans-serif; max-width: 900px; margin: 2rem auto; color: #1a1a1a; }
+h1 { font-size: 1.6rem; }
+.score { font-size: 3rem; font-weight: 700; }
+table { border-collapse: collapse; width: 100%; margin-bottom: 2rem; }
+td, th { border: 1px solid #ddd; padding: 6px 10px; text-align: left; font-size: 0.9rem; }
+th { background: #f5f5f5; }
+</style></head><body>
+<h1>Graph DB Health Report</h1>
+<div class="score">97.1/100</div>
+<table>
+<tr><td>Structural score</td><td>100.0/100</td></tr>
+<tr><td>Retrieval score</td><td>100.0/100</td></tr>
+<tr><td>Coverage score</td><td>85.7/100</td></tr>
+<tr><td>Total nodes</td><td>3379</td></tr>
+<tr><td>Total edges</td><td>13632</td></tr>
+<tr><td>Orphan data-nodes</td><td>0</td></tr>
+<tr><td>Dangling edges</td><td>0</td></tr>
+</table>
+<h2>Retrieval benchmark</h2>
+<table><tr><th>Check</th><th>Result</th><th>Latency</th></tr><tr><td>search finds a known register</td><td>PASS</td><td>207.0 ms</td></tr><tr><td>driver trace resolves to the writing always-block's file</td><td>PASS</td><td>8.6 ms</td></tr><tr><td>clock domain resolves to a real clock</td><td>PASS</td><td>6.4 ms</td></tr><tr><td>fanin of a register is non-empty</td><td>PASS</td><td>5.7 ms</td></tr><tr><td>module hierarchy resolves the top module</td><td>PASS</td><td>11.0 ms</td></tr></table>
+<h2>Under-covered source files (&lt;80% of always-blocks represented)</h2>
+<table><tr><th>File</th><th>AlwaysBlock nodes / always in source</th></tr><tr><td>rtl/common/round_robin_arb.sv</td><td>0/1</td></tr><tr><td>rtl/sram/tpe_sram.sv</td><td>0/1</td></tr></table>
+</body></html>

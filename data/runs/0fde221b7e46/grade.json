@@ -1,0 +1,14 @@
+{
+  "run_id": "0fde221b7e46",
+  "test": "top.irq_independent_clear_test",
+  "agent_file": "rtl/command_processor/tpe_cmd_proc.sv",
+  "agent_line": 244,
+  "expected_bug_number": 6,
+  "expected_file": "rtl/command_processor/tpe_cmd_proc.sv",
+  "expected_lines": [
+    242
+  ],
+  "file_match": true,
+  "line_match": true,
+  "verdict": "correct"
+}

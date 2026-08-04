@@ -1,0 +1,11 @@
+--- a/rtl/command_processor/tpe_cmd_proc.sv
++++ b/rtl/command_processor/tpe_cmd_proc.sv
+@@ -241,7 +241,7 @@
+       end
+ 
+       if (do_write && (s_awaddr == CP_IRQ_STATUS_ADDR)) begin
+-        irq_status_q <= irq_status_q & ~{2{s_wdata[0]}};
++        irq_status_q <= irq_status_q & ~s_wdata[1:0];
+       end
+ 
+       if (sched_done_valid) begin

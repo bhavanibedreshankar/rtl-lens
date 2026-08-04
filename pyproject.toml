@@ -1,0 +1,41 @@
+[project]
+name = "rtl-debug-agent"
+version = "0.1.0"
+description = "An AI agent that debugs RTL simulation failures using a deterministic graph representation of the design instead of embeddings/RAG."
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "MIT" }
+dependencies = [
+    "langgraph>=0.2.60",
+    "langgraph-checkpoint-sqlite>=2.0.0",
+    "langchain>=0.3.14",
+    "langchain-anthropic>=0.3.4",
+    "langmem>=0.0.11",
+    "anthropic>=0.42.0",
+    "pydantic>=2.9",
+    "pyyaml>=6.0",
+    "httpx>=0.27",
+    "python-dotenv>=1.0",
+    "rich>=13.9",
+    "streamlit>=1.40",
+    "junitparser>=3.2",
+    "tiktoken>=0.8",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["agent*", "graph_eval*", "dashboard*", "chat_ui*", "config*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

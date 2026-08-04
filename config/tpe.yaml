@@ -1,0 +1,47 @@
+# Project adapter config for the TPE (tensor processing engine) design.
+#
+# This is the ONLY file that should need to change to point rtl_debug_agent at a
+# different RTL design + graph database. Nothing under agent/ should hardcode a path,
+# URL, or command — see agent/tools/*.py, which read exclusively from a loaded
+# ProjectConfig (config/schema.py).
+
+project: tpe
+
+rtl_repo:
+  path: /Users/bhavanibs/Documents/Claude/ai-accelerator-development-platform
+  rtl_dir: rtl
+  spec_paths:
+    - docs/architecture/tpe_architecture_spec.md
+    - docs/register_map/tpe_regs.yaml
+  # Enforces blind debugging: these paths are never readable by agent/tools/rtl_tools.py
+  # or agent/tools/spec_tools.py, no matter what the LLM asks for. grader.py (run
+  # separately, offline, after diagnosis) is the only thing allowed to read this file.
+  excluded_paths:
+    - docs/verification/bug_list.md
+
+graph_db:
+  api_url: https://rtlgraph.vercel.app
+  local_fallback_cmd: "uvicorn api.main:app --app-dir src --port 8010"
+  local_fallback_cwd: /Users/bhavanibs/Documents/Claude/RTL_Graph
+  local_fallback_url: http://127.0.0.1:8010
+  request_timeout_s: 15
+
+sim:
+  run_cmd_template: "./run_sim -test {test}"
+  work_dir: /Users/bhavanibs/Documents/Claude/SIM_LOGS/WORK/smoke
+  status_file: rtl_sim/status.json
+  run_log_file: rtl_sim/run.log
+  results_xml_file: rtl_sim/results.xml
+
+models:
+  planning: claude-haiku-4-5-20251001
+  synthesis: claude-sonnet-5
+
+budget:
+  max_tokens_per_run: 150000
+  warn_at_pct: 80
+
+limits:
+  max_investigation_steps: 6
+  max_confidence_retries: 2
+  min_confidence_to_checkpoint: 0.35

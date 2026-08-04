@@ -1,0 +1,89 @@
+{
+  "score": 97.1,
+  "structural_score": 100.0,
+  "retrieval_score": 100.0,
+  "coverage_score": 85.7,
+  "structural": {
+    "node_counts": {
+      "AlwaysBlock": 447,
+      "Assignment": 947,
+      "ClockDomain": 1,
+      "Expression": 947,
+      "Instance": 285,
+      "Module": 16,
+      "Parameter": 71,
+      "Port": 350,
+      "Register": 117,
+      "ResetDomain": 1,
+      "Signal": 197
+    },
+    "edge_counts": {
+      "CLOCKED_BY": 194,
+      "CONNECTED_TO": 2352,
+      "CONTAINS": 2414,
+      "DEPENDS_ON": 2265,
+      "DRIVES": 3149,
+      "INSTANCE_OF": 285,
+      "READS": 2275,
+      "RESET_BY": 182,
+      "WRITES": 516
+    },
+    "total_nodes": 3379,
+    "total_edges": 13632,
+    "orphan_node_count": 0,
+    "orphan_node_examples": [],
+    "dangling_edge_count": 0
+  },
+  "retrieval": {
+    "hit_rate": 1.0,
+    "mean_latency_ms": 47.7,
+    "results": [
+      {
+        "name": "search finds a known register",
+        "passed": true,
+        "latency_ms": 206.95904199965298,
+        "error": null
+      },
+      {
+        "name": "driver trace resolves to the writing always-block's file",
+        "passed": true,
+        "latency_ms": 8.595125051215291,
+        "error": null
+      },
+      {
+        "name": "clock domain resolves to a real clock",
+        "passed": true,
+        "latency_ms": 6.354958983138204,
+        "error": null
+      },
+      {
+        "name": "fanin of a register is non-empty",
+        "passed": true,
+        "latency_ms": 5.688000004738569,
+        "error": null
+      },
+      {
+        "name": "module hierarchy resolves the top module",
+        "passed": true,
+        "latency_ms": 11.022791964933276,
+        "error": null
+      }
+    ]
+  },
+  "coverage": {
+    "mean_ratio": 0.8571428571428571,
+    "under_covered": [
+      {
+        "file": "rtl/common/round_robin_arb.sv",
+        "always_in_source": 1,
+        "always_blocks_in_graph": 0
+      },
+      {
+        "file": "rtl/sram/tpe_sram.sv",
+        "always_in_source": 1,
+        "always_blocks_in_graph": 0
+      }
+    ],
+    "files_checked": 14
+  }
+}
