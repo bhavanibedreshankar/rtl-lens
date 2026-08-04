@@ -3,6 +3,8 @@
 **An AI RTL debug agent that uses graph RAG — not embeddings — as its primary tool for
 tracing simulation failures to their root cause.**
 
+### 📊 [View live debug reports →](https://rtl-lens-bhavani89.vercel.app/)
+
 RTL-Lens debugs RTL simulation failures by querying a **deterministic graph
 representation** of the design ([`RTLGraph`](https://github.com/bhavanibedreshankar/RTLGraph)) —
 signal drivers, fanin/fanout, clock/reset domains — instead of vector-embedding-based
@@ -10,11 +12,28 @@ retrieval. Given a failing test's log directory, it traces the failure through t
 the design spec, proposes a minimal RTL patch with a quantified confidence score, and — after a
 human approval checkpoint — applies it on a new git branch and reruns the test to verify the fix.
 
-**Proven end-to-end**: pointed at a real 16×16 systolic-array accelerator design
-([`ai-accelerator-development-platform`](https://github.com/bhavanibedreshankar/tpe-tensor-processing-engine))
-with intentionally injected bugs, the agent independently localized a write-1-to-clear
-register bug to the exact source line, proposed a one-line fix, and verified it turned a
-failing test green — without ever reading the project's answer key.
+## Evaluation: what it fixed, what it didn't
+
+Run blind (never reading the demo repo's answer key) against a real 16×16 systolic-array
+accelerator design ([`tpe-tensor-processing-engine`](https://github.com/bhavanibedreshankar/tpe-tensor-processing-engine))
+with 7 intentionally injected RTL bugs, graded *after the fact* by an offline script that
+checks the agent's independent conclusion against the answer key. This is the honest
+scorecard, not a cherry-picked one — see the [live report](https://rtl-lens-bhavani89.vercel.app/)
+for full investigation traces on every one of these:
+
+| Test | Result | Notes |
+|---|---|---|
+| `top.irq_independent_clear_test` | ✅ Fixed & verified | W1C register mask bug, exact line match |
+| `matrix_engine.matmul_overflow_test` | ✅ Fixed & verified | Asymmetric saturation clamp, exact line match |
+| `top.matmul_full_width_test` | ✅ Fixed & verified | Off-by-one boundary check, exact line match |
+| `pmu.latency_test` | ✅ Fixed & verified | NBA-ordering latency bug — RTL source had a comment giving away the answer, so this one doesn't demonstrate blind debugging as cleanly as the others |
+| `dma.dma_multiburst_write_test` | ⚠️ Not resolved | Landed on the right file across several attempts but never the right line; rejected rather than shipped |
+| `matrix_engine.matmul_random_test` (bugs targeting `dim_k`/seed-chain off-by-ones) | ⚠️ Not resolved | Repeatedly diagnosed a *different*, real bug in the same block instead |
+
+**4 of 6 targeted bugs fixed and verified**, 2 honestly rejected rather than shipped
+incorrectly — including one case where a wrong patch would have scored "correct" by a naive
+line-proximity check but was actually incomplete and wouldn't compile (an undefined state
+value), caught only because the human-approval checkpoint exists.
 
 ## How it works
 
@@ -91,7 +110,7 @@ graph_eval/        graph database health/accuracy scoring harness
 chat_ui/           Streamlit GUI
 dashboard/         static reviewer dashboard generator
 data/runs/         per-run evidence trail, patch, token report, grade (git-tracked)
-docs/              generated dashboard, served via GitHub Pages
+docs/              generated dashboard, deployed to Vercel (see link above)
 ```
 
 ## Pointing at a different RTL design
@@ -109,8 +128,15 @@ python -m graph_eval.run --config config/tpe.yaml --report docs/graph_eval_repor
 ## Regenerating the dashboard
 
 ```bash
-python -m dashboard.generate --runs-root data/runs --graph-eval data/graph_eval_report.json --out docs/index.html
+python -m dashboard.generate \
+  --runs-root data/runs --graph-eval data/graph_eval_report.json \
+  --regression-xml /path/to/regression.xml --suite smoke \
+  --actions-url https://github.com/<owner>/<repo>/actions --out-dir docs
 ```
+
+Writes `docs/index.html` (the regression-level index — picked suite, GitHub Actions link,
+full pass/fail table) plus one `docs/reports/<test>.html` per debugged test. Redeploy with
+`vercel deploy docs --prod` (see `docs/index.html`'s live link above).
 
 ## Tech stack
 
