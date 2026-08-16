@@ -54,6 +54,9 @@ for tool/LLM abstractions, and [LangMem](https://langchain-ai.github.io/langmem/
 token-conserving memory (short-term summarization of long investigations, plus a persistent
 store of which tool sequences found root causes for past failure categories).
 
+For the full state-machine diagram, tool inventory, and persistence layers, see
+[`docs/architecture.md`](docs/architecture.md).
+
 ## Features
 
 - **Blind diagnosis** — the diagnosis loop's tools are scoped so the project's bug-list answer
