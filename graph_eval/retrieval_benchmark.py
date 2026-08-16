@@ -37,6 +37,20 @@ BENCHMARK: list[dict] = [
         "check": lambda r: any(c.get("name") == "clk" for c in r.get("clock_domains", [])),
     },
     {
+        # Companion to the clock-domain check above, on the same register:
+        # RTL_Graph had a real bug where clock/reset tie-breaking depended on
+        # Python's randomized set/hash iteration order, so a design could get
+        # clk and rst_n flipped between runs (fixed in RTL_Graph commit
+        # 1496fd9). The clock check alone would already catch a swap on this
+        # signal, but asserting the reset side too makes the benchmark
+        # symmetric and catches reset-specific regressions (wrong edge,
+        # wrong domain node) that a clock-only check can't see.
+        "name": "reset domain resolves to the real reset, not the clock",
+        "endpoint": "/signal/reset-tree",
+        "params": {"name": "irq_status_q", "module": "tpe_cmd_proc"},
+        "check": lambda r: any(c.get("name") == "rst_n" for c in r.get("reset_domains", [])),
+    },
+    {
         "name": "fanin of a register is non-empty",
         "endpoint": "/fanin",
         "params": {"signal": "irq_status_q", "module": "tpe_cmd_proc", "max_depth": 3},
